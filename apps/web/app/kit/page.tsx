@@ -1,6 +1,8 @@
+import { AccentPickerDemo } from './accent-picker-demo'
 import {
   accents,
   accentClasses,
+  Alert,
   Avatar,
   Button,
   Card,
@@ -9,6 +11,8 @@ import {
   contentKinds,
   KindBadge,
   Tag,
+  TextAreaField,
+  TextField,
 } from '@lanterngrid/ui'
 import type { Metadata } from 'next'
 import type { ReactNode } from 'react'
@@ -97,6 +101,26 @@ export default function KitPage() {
               size={i === 0 ? 'lg' : 'md'}
             />
           ))}
+        </div>
+      </Section>
+
+      <Section title="Forms">
+        <div className="grid max-w-lg gap-4">
+          <TextField id="kit-name" label="Name" defaultValue="Ada Park" />
+          <TextField
+            id="kit-username"
+            label="Username"
+            defaultValue="-ada"
+            error="Start and end with a letter or number."
+          />
+          <TextAreaField id="kit-bio" label="Bio" hint="Up to 1000 characters." />
+          <AccentPickerDemo />
+        </div>
+        <div className="grid max-w-lg gap-2">
+          <Alert tone="info">Heads up: this is an info message.</Alert>
+          <Alert tone="success">Profile saved.</Alert>
+          <Alert tone="warning">Confirm your email with the link we sent.</Alert>
+          <Alert tone="error">That email and password don&apos;t match.</Alert>
         </div>
       </Section>
 

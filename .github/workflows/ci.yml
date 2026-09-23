@@ -92,7 +92,7 @@ jobs:
       - name: Lint
         run: uv run ruff check . && uv run ruff format --check .
       - name: Typecheck
-        run: uv run mypy app scripts
+        run: uv run mypy app scripts tests
       - name: Migrate
         run: uv run alembic upgrade head
       - name: Test

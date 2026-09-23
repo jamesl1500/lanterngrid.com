@@ -3,7 +3,12 @@ import type { ComponentProps } from 'react'
 import { cn } from '../lib/cn'
 import { accentClasses, type Accent } from '../lib/kinds'
 
-const sizes = { sm: 'size-7 text-xs', md: 'size-9 text-sm', lg: 'size-16 text-xl' } as const
+const sizes = {
+  sm: 'size-7 text-xs',
+  md: 'size-9 text-sm',
+  lg: 'size-16 text-xl',
+  xl: 'size-28 text-4xl',
+} as const
 
 export type AvatarProps = Omit<ComponentProps<'span'>, 'children'> & {
   name: string

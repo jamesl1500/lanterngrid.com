@@ -40,7 +40,12 @@ pnpm db:migrate
 pnpm dev              # web on :3000, API on :8000
 ```
 
-Open http://localhost:3000. The system status panel on the home page shows whether the API,
+Open http://localhost:3000 and create an account. Verification and password-reset emails
+land in Mailpit at http://localhost:8025. To try GitHub sign-in, create a GitHub OAuth app with
+the callback URL `http://localhost:3000/api/v1/auth/github/callback` and put its client id and
+secret in `.env`.
+
+The system status panel on the home page shows whether the API,
 Postgres and Redis are reachable. The UI kit lives at http://localhost:3000/kit and the API
 docs at http://localhost:8000/docs.
 
@@ -62,5 +67,8 @@ New migration: `cd apps/api && uv run alembic revision --autogenerate -m "add us
 - **Web** deploys to Vercel with `apps/web` as the root directory. Set `API_URL` to the API's
   public URL.
 - **API** deploys to Railway from `infra/docker/api.Dockerfile` (build context is the repo root).
-  Set `DATABASE_URL` (use the `postgresql+asyncpg://` scheme), `REDIS_URL`, `CORS_ORIGINS` and
-  `ENVIRONMENT`, and use `alembic upgrade head` as the pre-deploy command.
+  Set `DATABASE_URL` (use the `postgresql+asyncpg://` scheme), `REDIS_URL`, `CORS_ORIGINS`,
+  `WEB_URL`, `ENVIRONMENT`, the `SMTP_*` and `EMAIL_*` settings, and the GitHub OAuth app's
+  `GITHUB_CLIENT_ID` and `GITHUB_CLIENT_SECRET` (callback URL
+  `https://<web domain>/api/v1/auth/github/callback`). Use `alembic upgrade head` as the
+  pre-deploy command.
