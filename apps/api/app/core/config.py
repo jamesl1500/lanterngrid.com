@@ -9,7 +9,7 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=("../../.env", ".env"), extra="ignore")
 
     environment: Literal["development", "test", "staging", "production"] = "development"
-    database_url: str = "postgresql+asyncpg://lanterngrid:lanterngrid@localhost:5432/lanterngrid"
+    database_url: str = "postgresql+asyncpg://lanterngrid:lanterngrid@localhost:5434/lanterngrid"
     redis_url: str = "redis://localhost:6379/0"
     cors_origins: Annotated[list[str], NoDecode] = ["http://localhost:3000"]
 
