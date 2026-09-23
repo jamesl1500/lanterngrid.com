@@ -1,0 +1,165 @@
+/*
+ * Lantern Grid design tokens.
+ *
+ * Import after tailwindcss in the app's global stylesheet:
+ *   @import 'tailwindcss';
+ *   @import '@lanterngrid/ui/styles.css';
+ *
+ * Rules: no rounded corners (the radius scale is removed), hard borders, hard offset shadows
+ * with no blur, and one accent color per content kind.
+ */
+
+@source './';
+
+@custom-variant dark (&:where([data-theme='dark'], [data-theme='dark'] *));
+
+:root {
+  color-scheme: light;
+  --lg-ground: #f3f5f8;
+  --lg-surface: #ffffff;
+  --lg-sunk: #e9edf2;
+  --lg-ink: #0c1017;
+  --lg-ink-2: #3d4756;
+  --lg-ink-3: #667085;
+  --lg-line: #c9d1dc;
+  --lg-line-strong: #0c1017;
+  --lg-grid: rgb(12 16 23 / 0.06);
+
+  --lg-cyan: #0092b8;
+  --lg-violet: #6a4df5;
+  --lg-lime: #4e9a12;
+  --lg-amber: #c77c00;
+  --lg-magenta: #d6246e;
+  --lg-coral: #e0562b;
+
+  --lg-cyan-soft: #e0f6fb;
+  --lg-violet-soft: #ece8ff;
+  --lg-lime-soft: #e9f6dc;
+  --lg-amber-soft: #fff2d6;
+  --lg-magenta-soft: #fde4ee;
+  --lg-coral-soft: #fde9e1;
+}
+
+/* Dark is the default look; light is available via data-theme="light" or the OS setting. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    color-scheme: dark;
+    --lg-ground: #0a0d12;
+    --lg-surface: #11161e;
+    --lg-sunk: #171e28;
+    --lg-ink: #e8edf4;
+    --lg-ink-2: #b3bdcb;
+    --lg-ink-3: #8491a3;
+    --lg-line: #263041;
+    --lg-line-strong: #e8edf4;
+    --lg-grid: rgb(232 237 244 / 0.05);
+
+    --lg-cyan: #2fd4f5;
+    --lg-violet: #9c88ff;
+    --lg-lime: #8edb3f;
+    --lg-amber: #ffb938;
+    --lg-magenta: #ff4f97;
+    --lg-coral: #ff7a4d;
+
+    --lg-cyan-soft: #0b2830;
+    --lg-violet-soft: #1c1838;
+    --lg-lime-soft: #16260a;
+    --lg-amber-soft: #2b2008;
+    --lg-magenta-soft: #2e0f1e;
+    --lg-coral-soft: #2e150c;
+  }
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --lg-ground: #0a0d12;
+  --lg-surface: #11161e;
+  --lg-sunk: #171e28;
+  --lg-ink: #e8edf4;
+  --lg-ink-2: #b3bdcb;
+  --lg-ink-3: #8491a3;
+  --lg-line: #263041;
+  --lg-line-strong: #e8edf4;
+  --lg-grid: rgb(232 237 244 / 0.05);
+
+  --lg-cyan: #2fd4f5;
+  --lg-violet: #9c88ff;
+  --lg-lime: #8edb3f;
+  --lg-amber: #ffb938;
+  --lg-magenta: #ff4f97;
+  --lg-coral: #ff7a4d;
+
+  --lg-cyan-soft: #0b2830;
+  --lg-violet-soft: #1c1838;
+  --lg-lime-soft: #16260a;
+  --lg-amber-soft: #2b2008;
+  --lg-magenta-soft: #2e0f1e;
+  --lg-coral-soft: #2e150c;
+}
+
+@theme inline {
+  /* Sharp corners only: remove the rounded-* scale entirely. */
+  --radius-*: initial;
+
+  --color-ground: var(--lg-ground);
+  --color-surface: var(--lg-surface);
+  --color-sunk: var(--lg-sunk);
+  --color-ink: var(--lg-ink);
+  --color-ink-2: var(--lg-ink-2);
+  --color-ink-3: var(--lg-ink-3);
+  --color-line: var(--lg-line);
+  --color-line-strong: var(--lg-line-strong);
+
+  --color-cyan: var(--lg-cyan);
+  --color-violet: var(--lg-violet);
+  --color-lime: var(--lg-lime);
+  --color-amber: var(--lg-amber);
+  --color-magenta: var(--lg-magenta);
+  --color-coral: var(--lg-coral);
+  --color-cyan-soft: var(--lg-cyan-soft);
+  --color-violet-soft: var(--lg-violet-soft);
+  --color-lime-soft: var(--lg-lime-soft);
+  --color-amber-soft: var(--lg-amber-soft);
+  --color-magenta-soft: var(--lg-magenta-soft);
+  --color-coral-soft: var(--lg-coral-soft);
+
+  --font-sans: var(--font-plex), 'IBM Plex Sans', 'Segoe UI', system-ui, sans-serif;
+  --font-display: var(--font-chakra), 'Chakra Petch', 'Segoe UI', system-ui, sans-serif;
+  --font-mono: var(--font-jetbrains), 'JetBrains Mono', ui-monospace, Menlo, Consolas, monospace;
+
+  --shadow-hard-sm: 2px 2px 0 var(--lg-line-strong);
+  --shadow-hard: 4px 4px 0 var(--lg-line-strong);
+  --shadow-hard-lg: 6px 6px 0 var(--lg-line-strong);
+}
+
+@layer base {
+  html {
+    background: var(--lg-ground);
+    color: var(--lg-ink);
+  }
+  body {
+    @apply bg-ground text-ink font-sans antialiased;
+  }
+  h1,
+  h2,
+  h3,
+  h4 {
+    @apply font-display;
+    text-wrap: balance;
+  }
+  :focus-visible {
+    outline: 2px solid var(--lg-magenta);
+    outline-offset: 2px;
+  }
+}
+
+@utility bg-grid {
+  background-image:
+    linear-gradient(var(--lg-grid) 1px, transparent 1px),
+    linear-gradient(90deg, var(--lg-grid) 1px, transparent 1px);
+  background-size: 16px 16px;
+}
+
+@utility label {
+  @apply font-mono text-xs tracking-[0.12em] uppercase text-ink-3;
+}
