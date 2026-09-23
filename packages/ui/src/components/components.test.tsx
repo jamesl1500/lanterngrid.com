@@ -1,7 +1,10 @@
 import { render, screen } from '@testing-library/react'
 
+import { AccentPicker } from './accent-picker'
 import { Avatar, initials } from './avatar'
 import { Button } from './button'
+import { describedBy, Field } from './field'
+import { Input } from './input'
 import { KindBadge } from './kind-badge'
 import { Tag } from './tag'
 
@@ -46,5 +49,29 @@ describe('Tag and KindBadge', () => {
   it('colors a badge by its content kind', () => {
     render(<KindBadge kind="snippet" />)
     expect(screen.getByText('snippet')).toHaveClass('text-violet')
+  })
+})
+
+describe('Field and Input', () => {
+  it('labels the control and shows the error instead of the hint', () => {
+    render(
+      <Field id="email" label="Email" hint="We never share it" error="Enter an email">
+        <Input id="email" aria-invalid aria-describedby={describedBy('email', { error: 'x' })} />
+      </Field>,
+    )
+    const input = screen.getByLabelText('Email')
+    expect(input).toHaveAttribute('aria-describedby', 'email-error')
+    expect(screen.getByText('Enter an email')).toBeInTheDocument()
+    expect(screen.queryByText('We never share it')).not.toBeInTheDocument()
+  })
+})
+
+describe('AccentPicker', () => {
+  it('reports the chosen accent', async () => {
+    const onChange = vi.fn()
+    render(<AccentPicker name="accent" value="violet" onChange={onChange} />)
+    screen.getByLabelText('lime').click()
+    expect(onChange).toHaveBeenCalledWith('lime')
+    expect(screen.getByLabelText('violet')).toBeChecked()
   })
 })

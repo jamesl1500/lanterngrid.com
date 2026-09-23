@@ -3,6 +3,7 @@ import { Chakra_Petch, IBM_Plex_Sans, JetBrains_Mono } from 'next/font/google'
 import type { ReactNode } from 'react'
 
 import { SiteHeader } from '@/components/site-header'
+import { VerifyBanner } from '@/components/verify-banner'
 
 import './globals.css'
 import { Providers } from './providers'
@@ -38,6 +39,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       <body className="min-h-dvh">
         <Providers>
           <SiteHeader />
+          <VerifyBanner />
           {children}
         </Providers>
       </body>
