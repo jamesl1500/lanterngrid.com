@@ -24,8 +24,10 @@ _dev_db = make_url(
         "DATABASE_URL", "postgresql+asyncpg://lanterngrid:lanterngrid@localhost:5432/lanterngrid"
     )
 )
-TEST_DB_URL = make_url(
-    os.environ.get("TEST_DATABASE_URL") or str(_dev_db.set(database=f"{_dev_db.database}_test"))
+TEST_DB_URL = (
+    make_url(os.environ["TEST_DATABASE_URL"])
+    if os.environ.get("TEST_DATABASE_URL")
+    else _dev_db.set(database=f"{_dev_db.database}_test")
 )
 os.environ["DATABASE_URL"] = TEST_DB_URL.render_as_string(hide_password=False)
 _redis = os.environ.get("REDIS_URL", "redis://localhost:6379/0").rsplit("/", 1)[0]
