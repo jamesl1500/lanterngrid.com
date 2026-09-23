@@ -28,7 +28,19 @@ See README.md for setup and commands.
   OFFSET.
 - Python: Ruff (lint + format) and mypy strict must pass. TypeScript: ESLint, Prettier and
   strict tsc must pass.
-- API tests run against a real Postgres and Redis, not mocks.
+- API tests run against a real Postgres and Redis, not mocks. `tests/conftest.py` points them at
+  a separate `<db>_test` database and Redis db 15, and truncates every table after each test.
+  Only outside services (GitHub) are faked, by overriding their FastAPI dependency.
+
+## Auth
+
+- FastAPI owns auth. The session cookie `lg_session` holds a random token; only its SHA-256 is
+  stored (`sessions` table). Email links (`email_tokens`) work the same way and are single-use.
+- Routes get the signed-in person from `CurrentUserDep` / `OptionalUserDep`
+  (`app.modules.auth.deps`). Writes from another site's `Origin` are rejected in `app/main.py`.
+- On the web side, server components use `getMe()` / `requireMe()` from `lib/session.ts`;
+  client forms call `browserApi` and wrap calls in `attempt()` from `lib/errors.ts`.
+- A signed-in account has no username until onboarding; `requireMe()` sends it there.
 
 ## Design rules
 

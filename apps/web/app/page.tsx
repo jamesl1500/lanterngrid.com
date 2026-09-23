@@ -1,8 +1,12 @@
 import { Button, Card, KindBadge, type ContentKind } from '@lanterngrid/ui'
+import Link from 'next/link'
 import { Suspense } from 'react'
 
 import { ApiStatus } from '@/components/api-status'
+import { GitHubMark } from '@/components/auth/github-button'
 import { SamplePost } from '@/components/sample-post'
+import { githubStartUrl } from '@/lib/routes'
+import { getMe, getProviders } from '@/lib/session'
 
 const features: { kind: ContentKind; title: string; body: string }[] = [
   {
@@ -32,6 +36,39 @@ const features: { kind: ContentKind; title: string; body: string }[] = [
   },
 ]
 
+async function HeroActions() {
+  const me = await getMe()
+  if (me) {
+    return (
+      <div className="flex flex-wrap gap-3">
+        <Button asChild variant="accent" size="lg">
+          <Link href={me.username ? `/u/${me.username}` : '/onboarding'}>
+            {me.username ? 'View your profile' : 'Finish setting up'}
+          </Link>
+        </Button>
+      </div>
+    )
+  }
+  const { github } = await getProviders()
+  return (
+    <div className="flex flex-wrap gap-3">
+      {github ? (
+        <Button asChild variant="accent" size="lg">
+          <a href={githubStartUrl()}>
+            <GitHubMark className="size-4" /> Join with GitHub
+          </a>
+        </Button>
+      ) : null}
+      <Button asChild variant={github ? 'secondary' : 'accent'} size="lg">
+        <Link href="/signup">{github ? 'Join with email' : 'Create an account'}</Link>
+      </Button>
+      <Button asChild variant="ghost" size="lg">
+        <Link href="/signin">Sign in</Link>
+      </Button>
+    </div>
+  )
+}
+
 export default function HomePage() {
   return (
     <main className="mx-auto grid max-w-6xl gap-14 px-4 py-10">
@@ -47,14 +84,7 @@ export default function HomePage() {
             Post updates, drop code snippets, show off your repos and celebrate your wins with
             engineers who get it.
           </p>
-          <div className="flex flex-wrap gap-3">
-            <Button variant="accent" size="lg" disabled>
-              Join with GitHub
-            </Button>
-            <Button variant="secondary" size="lg" disabled>
-              Sign in
-            </Button>
-          </div>
+          <HeroActions />
           <div aria-hidden className="flex h-1.5">
             <i className="flex-1 bg-cyan" />
             <i className="flex-1 bg-lime" />
