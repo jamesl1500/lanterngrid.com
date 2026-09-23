@@ -1,7 +1,7 @@
 import type { ComponentProps, ReactNode } from 'react'
 
 import { cn } from '../lib/cn'
-import { Input, Textarea } from './input'
+import { Input, Select, Textarea } from './input'
 
 export type FieldProps = {
   /** id of the control inside, so the label and messages point at it. */
@@ -75,6 +75,26 @@ export function TextAreaField({ id, label, hint, error, className, ...props }: T
   return (
     <Field id={id} label={label} hint={hint} error={error} className={className}>
       <Textarea
+        id={id}
+        aria-invalid={error ? true : undefined}
+        aria-describedby={describedBy(id, { error, hint })}
+        {...props}
+      />
+    </Field>
+  )
+}
+
+export type SelectFieldProps = ComponentProps<'select'> & {
+  id: string
+  label: string
+  hint?: ReactNode
+  error?: string
+}
+
+export function SelectField({ id, label, hint, error, className, ...props }: SelectFieldProps) {
+  return (
+    <Field id={id} label={label} hint={hint} error={error} className={className}>
+      <Select
         id={id}
         aria-invalid={error ? true : undefined}
         aria-describedby={describedBy(id, { error, hint })}

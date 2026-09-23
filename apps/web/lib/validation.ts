@@ -1,5 +1,8 @@
 import { z } from 'zod'
 
+import { LINK_KINDS, MAX_LINKS } from './links'
+import { MAX_TAGS } from './tags'
+
 // Mirrors the API's rules so people see problems before submitting. The API still decides.
 export const USERNAME_PATTERN = /^[A-Za-z0-9](?:[A-Za-z0-9_-]{1,28}[A-Za-z0-9])$/
 
@@ -26,19 +29,38 @@ export const signInSchema = z.object({ email, password: z.string().min(1, 'Enter
 export const signUpSchema = z.object({ display_name: displayName, email, password })
 export const forgotPasswordSchema = z.object({ email })
 export const resetPasswordSchema = z.object({ password })
-export const onboardingSchema = z.object({ username, display_name: displayName, headline })
+export const onboardingSchema = z.object({
+  username,
+  display_name: displayName,
+  headline,
+  tags: z.array(z.string()).max(MAX_TAGS, `Pick up to ${MAX_TAGS} tags.`),
+})
+
+const httpUrl = (max: number) =>
+  z
+    .string()
+    .trim()
+    .max(max, `Keep it under ${max} characters.`)
+    .refine(
+      (v) => v === '' || /^https?:\/\/\S+\.\S+/.test(v),
+      'Use a full link, like https://you.dev',
+    )
 export const profileSchema = z.object({
   display_name: displayName,
   headline,
   bio: z.string().trim().max(1000, 'Keep it under 1000 characters.'),
   location: z.string().trim().max(80, 'Keep it under 80 characters.'),
-  website: z
-    .string()
-    .trim()
-    .max(200, 'Keep it under 200 characters.')
-    .refine(
-      (v) => v === '' || /^https?:\/\/\S+\.\S+/.test(v),
-      'Use a full link, like https://you.dev',
-    ),
+  website: httpUrl(200),
   accent_color: z.enum(['cyan', 'violet', 'lime', 'amber', 'magenta', 'coral']),
+})
+
+export const linksSchema = z.object({
+  links: z
+    .array(
+      z.object({
+        kind: z.enum(LINK_KINDS),
+        url: httpUrl(300).refine((v) => v !== '', 'Add the link, or remove this row.'),
+      }),
+    )
+    .max(MAX_LINKS, `Add up to ${MAX_LINKS} links.`),
 })

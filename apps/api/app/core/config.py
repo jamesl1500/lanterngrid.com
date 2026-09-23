@@ -32,6 +32,15 @@ class Settings(BaseSettings):
     smtp_password: str | None = None
     smtp_starttls: bool = False
 
+    # S3-compatible storage for uploads: MinIO locally, Cloudflare R2 in production.
+    storage_endpoint_url: str | None = "http://localhost:9000"
+    storage_region: str = "us-east-1"
+    storage_bucket: str = "lanterngrid-media"
+    storage_access_key: str = "lanterngrid"
+    storage_secret_key: str = "lanterngrid"
+    # Where browsers read uploaded files from (a public bucket URL or a CDN domain).
+    storage_public_url: str = "http://localhost:9000/lanterngrid-media"
+
     @field_validator("cors_origins", mode="before")
     @classmethod
     def split_origins(cls, value: object) -> object:

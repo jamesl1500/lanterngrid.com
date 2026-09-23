@@ -5,6 +5,8 @@ from typing import Annotated, Literal
 
 from pydantic import AfterValidator, BaseModel, BeforeValidator, Field, HttpUrl
 
+from app.modules.tags.schemas import TagList, TagOut
+
 USERNAME_PATTERN = r"^[A-Za-z0-9](?:[A-Za-z0-9_-]{1,28}[A-Za-z0-9])$"
 _USERNAME_RE = re.compile(USERNAME_PATTERN)
 
@@ -21,6 +23,11 @@ RESERVED_USERNAMES = frozenset(
 )  # fmt: skip
 
 Accent = Literal["cyan", "violet", "lime", "amber", "magenta", "coral"]
+LinkKind = Literal[
+    "github", "gitlab", "linkedin", "x", "mastodon", "bluesky", "website", "blog", "youtube",
+    "other",
+]  # fmt: skip
+MAX_PROFILE_LINKS = 8
 UsernameProblem = Literal["invalid", "reserved", "taken"]
 
 
@@ -68,6 +75,9 @@ DisplayName = Annotated[str, BeforeValidator(_strip), Field(min_length=1, max_le
 Headline = Annotated[Annotated[str, Field(max_length=120)] | None, BeforeValidator(_blank_to_none)]
 Bio = Annotated[Annotated[str, Field(max_length=1000)] | None, BeforeValidator(_blank_to_none)]
 Location = Annotated[Annotated[str, Field(max_length=80)] | None, BeforeValidator(_blank_to_none)]
+LinkUrl = Annotated[
+    str, BeforeValidator(_strip), Field(min_length=1, max_length=300), AfterValidator(_check_url)
+]
 Website = Annotated[
     Annotated[str, Field(max_length=200), AfterValidator(_check_url)] | None,
     BeforeValidator(_blank_to_none),
@@ -84,9 +94,26 @@ class Me(BaseModel):
     display_name: str
     headline: str | None
     accent_color: Accent
+    avatar_url: str | None
     has_password: bool
     github_login: str | None
     created_at: datetime
+
+
+class ProfileLinkOut(BaseModel):
+    kind: LinkKind
+    url: str
+
+
+class ProfileLinkIn(BaseModel):
+    kind: LinkKind
+    url: LinkUrl
+
+
+class LinksUpdate(BaseModel):
+    """The full list, in display order."""
+
+    links: Annotated[list[ProfileLinkIn], Field(max_length=MAX_PROFILE_LINKS)]
 
 
 class PublicProfile(BaseModel):
@@ -97,6 +124,10 @@ class PublicProfile(BaseModel):
     location: str | None
     website: str | None
     accent_color: Accent
+    avatar_url: str | None
+    banner_url: str | None
+    links: list[ProfileLinkOut]
+    tags: list[TagOut]
     joined_at: datetime
 
 
@@ -107,6 +138,10 @@ class ProfileSettings(BaseModel):
     location: str | None
     website: str | None
     accent_color: Accent
+    avatar_url: str | None
+    banner_url: str | None
+    links: list[ProfileLinkOut]
+    tags: list[TagOut]
 
 
 class ProfileUpdate(BaseModel):
@@ -124,6 +159,7 @@ class OnboardingRequest(BaseModel):
     username: Username
     display_name: DisplayName
     headline: Headline = None
+    tags: TagList = []
 
 
 class UsernameAvailability(BaseModel):

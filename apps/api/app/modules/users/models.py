@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import DateTime, ForeignKey, String, Text, func
+from sqlalchemy import DateTime, ForeignKey, Index, SmallInteger, String, Text, func
 from sqlalchemy.dialects.postgresql import CITEXT
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -45,3 +45,16 @@ class Profile(Base):
     )
 
     user: Mapped[User] = relationship(back_populates="profile")
+
+
+class ProfileLink(Base):
+    """A link shown on someone's profile: GitHub, a blog, a Mastodon account..."""
+
+    __tablename__ = "profile_links"
+    __table_args__ = (Index("ix_profile_links_user_id_position", "user_id", "position"),)
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid7)
+    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
+    kind: Mapped[str] = mapped_column(String(16))
+    url: Mapped[str] = mapped_column(String(300))
+    position: Mapped[int] = mapped_column(SmallInteger)
