@@ -1,0 +1,14 @@
+pre-commit:
+  parallel: true
+  commands:
+    prettier:
+      glob: '*.{ts,tsx,js,mjs,json,css,md,yml,yaml}'
+      exclude:
+        - pnpm-lock.yaml
+        - packages/api-client/openapi.json
+        - packages/api-client/src/schema.d.ts
+      run: pnpm exec prettier --check {staged_files}
+    ruff:
+      root: apps/api/
+      glob: '*.py'
+      run: uv run ruff check {staged_files} && uv run ruff format --check {staged_files}
