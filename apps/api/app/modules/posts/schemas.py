@@ -4,10 +4,14 @@ from typing import Annotated, Literal, Self
 
 from pydantic import BaseModel, BeforeValidator, Field, model_validator
 
+from app.modules.snippets.schemas import SnippetOut
 from app.modules.tags.schemas import TagOut
 from app.modules.users.schemas import UserSummary
 
-PostKind = Literal["update"]
+PostKind = Literal["update", "snippet", "achievement"]
+AchievementType = Literal[
+    "shipped", "launched", "promoted", "new_job", "certified", "first_oss_merge", "milestone"
+]
 Visibility = Literal["public", "friends"]
 
 MAX_POST_LENGTH = 5000
@@ -29,6 +33,7 @@ CommentBody = Annotated[
     str, BeforeValidator(_trim), Field(min_length=1, max_length=MAX_COMMENT_LENGTH)
 ]
 EMPTY_POST = "Write something or add an image."
+ONE_ATTACHMENT = "A post can share a snippet or an achievement, not both."
 
 
 class PostImageIn(BaseModel):
@@ -38,14 +43,29 @@ class PostImageIn(BaseModel):
     alt: Annotated[str, BeforeValidator(_trim), Field(max_length=300)] = ""
 
 
+class AchievementIn(BaseModel):
+    type: AchievementType
+    title: Annotated[str, BeforeValidator(_trim), Field(min_length=1, max_length=100)]
+
+
+class AchievementOut(BaseModel):
+    type: AchievementType
+    title: str
+
+
 class PostCreate(BaseModel):
     body_md: Body = ""
     visibility: Visibility = "public"
     images: list[PostImageIn] = Field(default=[], max_length=MAX_IMAGES)
+    # Share one of your snippets (a snippet post) or celebrate something (an achievement post).
+    snippet_id: uuid.UUID | None = None
+    achievement: AchievementIn | None = None
 
     @model_validator(mode="after")
-    def _not_empty(self) -> Self:
-        if not self.body_md and not self.images:
+    def _check(self) -> Self:
+        if self.snippet_id and self.achievement:
+            raise ValueError(ONE_ATTACHMENT)
+        if not (self.body_md or self.images or self.snippet_id or self.achievement):
             raise ValueError(EMPTY_POST)
         return self
 
@@ -56,6 +76,8 @@ class PostUpdate(BaseModel):
     body_md: Body | None = None
     visibility: Visibility | None = None
     images: list[PostImageIn] | None = Field(default=None, max_length=MAX_IMAGES)
+    # Only for achievement posts.
+    achievement: AchievementIn | None = None
 
 
 class PostImageOut(BaseModel):
@@ -85,6 +107,9 @@ class PostOut(BaseModel):
     tags: list[TagOut]
     mentions: list[str]
     images: list[PostImageOut]
+    # The shared snippet, when the viewer can see it (null if it was deleted or hidden).
+    snippet: SnippetOut | None
+    achievement: AchievementOut | None
     # Only kinds someone used, in REACTION_KINDS order.
     reactions: list[ReactionCount]
     comment_count: int

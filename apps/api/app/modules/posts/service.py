@@ -11,10 +11,20 @@ from app.core.storage import Storage, public_url
 from app.modules.media import service as media
 from app.modules.notifications import service as notifications
 from app.modules.posts import text
-from app.modules.posts.models import Comment, Mention, Post, PostImage, PostTag, Reaction
+from app.modules.posts.models import (
+    Achievement,
+    Comment,
+    Mention,
+    Post,
+    PostImage,
+    PostTag,
+    Reaction,
+)
 from app.modules.posts.schemas import (
     EMPTY_POST,
     REACTION_KINDS,
+    AchievementIn,
+    AchievementOut,
     CommentCreate,
     CommentOut,
     CommentPage,
@@ -28,6 +38,7 @@ from app.modules.posts.schemas import (
     ReactionCount,
     ReactionKind,
 )
+from app.modules.snippets import service as snippets
 from app.modules.social import service as social
 from app.modules.tags import service as tags
 from app.modules.tags.models import Tag
@@ -48,20 +59,14 @@ class EmptyPostError(Exception):
     pass
 
 
+class SnippetShareError(Exception):
+    """The snippet isn't yours, or is friends only while the post is public."""
+
+
 def visible_to(viewer_id: uuid.UUID | None) -> ColumnElement[bool]:
-    """Posts this person may see: public ones, their own, and their friends' friends-only ones,
-    minus anything from people either side has blocked."""
-    live = Post.deleted_at.is_(None)
-    if viewer_id is None:
-        return and_(live, Post.visibility == "public")
+    """Live posts this person may see (see social.can_see)."""
     return and_(
-        live,
-        ~social.blocked_either_way(viewer_id, Post.author_id),
-        or_(
-            Post.visibility == "public",
-            Post.author_id == viewer_id,
-            Post.author_id.in_(social.friend_ids_of(viewer_id)),
-        ),
+        Post.deleted_at.is_(None), social.can_see(viewer_id, Post.author_id, Post.visibility)
     )
 
 
@@ -114,7 +119,11 @@ async def _outs(
     mentions_by_post: dict[uuid.UUID, list[str]] = defaultdict(list)
     images_by_post: dict[uuid.UUID, list[PostImageOut]] = defaultdict(list)
     comment_counts: dict[uuid.UUID, int] = {}
+    achievements: dict[uuid.UUID, AchievementOut] = {}
+    shared = await snippets.by_ids(db, viewer_id, [p.snippet_id for p in posts if p.snippet_id])
     if ids:
+        for a in await db.scalars(select(Achievement).where(Achievement.post_id.in_(ids))):
+            achievements[a.post_id] = AchievementOut(type=a.type, title=a.title)
         for post_id, tag in await db.execute(
             select(PostTag.post_id, Tag)
             .join(Tag, Tag.id == PostTag.tag_id)
@@ -156,6 +165,8 @@ async def _outs(
             tags=tags_by_post[p.id],
             mentions=mentions_by_post[p.id],
             images=images_by_post[p.id],
+            snippet=snippets.to_out(shared[p.snippet_id]) if p.snippet_id in shared else None,
+            achievement=achievements.get(p.id),
             reactions=reactions[p.id],
             comment_count=comment_counts.get(p.id, 0),
             created_at=p.created_at,
@@ -243,10 +254,39 @@ async def _sync_mentions(db: AsyncSession, post: Post) -> None:
             )
 
 
+async def _check_snippet(
+    db: AsyncSession, author: User, snippet_id: uuid.UUID, visibility: str
+) -> None:
+    try:
+        snippet = await snippets.own(db, author, snippet_id)
+    except snippets.SnippetNotFoundError:
+        raise SnippetShareError("You can only share your own snippets.") from None
+    if snippet.visibility == "friends" and visibility == "public":
+        raise SnippetShareError("That snippet is friends only, so the post has to be too.")
+
+
+async def _set_achievement(db: AsyncSession, post: Post, achievement: AchievementIn) -> None:
+    await db.merge(Achievement(post_id=post.id, type=achievement.type, title=achievement.title))
+
+
 async def create(db: AsyncSession, storage: Storage, author: User, data: PostCreate) -> PostOut:
-    post = Post(author_id=author.id, body_md=data.body_md, visibility=data.visibility)
+    kind = "update"
+    if data.snippet_id is not None:
+        await _check_snippet(db, author, data.snippet_id, data.visibility)
+        kind = "snippet"
+    elif data.achievement is not None:
+        kind = "achievement"
+    post = Post(
+        author_id=author.id,
+        kind=kind,
+        body_md=data.body_md,
+        visibility=data.visibility,
+        snippet_id=data.snippet_id,
+    )
     db.add(post)
     await db.flush()
+    if data.achievement is not None:
+        await _set_achievement(db, post, data.achievement)
     await _sync_images(db, storage, post, data.images)
     await _sync_tags(db, post)
     await _sync_mentions(db, post)
@@ -284,14 +324,18 @@ async def update(
         post.body_md = data.body_md
         post.edited_at = datetime.now(UTC)
     if data.visibility is not None:
+        if post.snippet_id is not None:
+            await _check_snippet(db, author, post.snippet_id, data.visibility)
         post.visibility = data.visibility
+    if data.achievement is not None and post.kind == "achievement":
+        await _set_achievement(db, post, data.achievement)
     unused: list[str] = []
     if data.images is not None:
         unused = await _sync_images(db, storage, post, data.images)
     has_images = await db.scalar(
         select(func.count()).select_from(PostImage).where(PostImage.post_id == post.id)
     )
-    if not post.body_md and not has_images:
+    if not post.body_md and not has_images and post.kind == "update":
         await db.rollback()
         raise EmptyPostError(EMPTY_POST)
     await _sync_tags(db, post)

@@ -1,6 +1,62 @@
 {
   "components": {
     "schemas": {
+      "AchievementIn": {
+        "properties": {
+          "title": {
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Title",
+            "type": "string"
+          },
+          "type": {
+            "enum": [
+              "shipped",
+              "launched",
+              "promoted",
+              "new_job",
+              "certified",
+              "first_oss_merge",
+              "milestone"
+            ],
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type",
+          "title"
+        ],
+        "title": "AchievementIn",
+        "type": "object"
+      },
+      "AchievementOut": {
+        "properties": {
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "type": {
+            "enum": [
+              "shipped",
+              "launched",
+              "promoted",
+              "new_job",
+              "certified",
+              "first_oss_merge",
+              "milestone"
+            ],
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type",
+          "title"
+        ],
+        "title": "AchievementOut",
+        "type": "object"
+      },
       "AttachImage": {
         "properties": {
           "key": {
@@ -566,8 +622,59 @@
         "title": "PasswordResetRequest",
         "type": "object"
       },
+      "PinOut": {
+        "properties": {
+          "snippet": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SnippetOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "type": {
+            "const": "snippet",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type"
+        ],
+        "title": "PinOut",
+        "type": "object"
+      },
+      "Pins": {
+        "description": "In the order they were pinned. Only what the viewer can see.",
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/PinOut"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "Pins",
+        "type": "object"
+      },
       "PostCreate": {
         "properties": {
+          "achievement": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AchievementIn"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "body_md": {
             "default": "",
             "maxLength": 5000,
@@ -582,6 +689,18 @@
             "maxItems": 4,
             "title": "Images",
             "type": "array"
+          },
+          "snippet_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Snippet Id"
           },
           "visibility": {
             "default": "public",
@@ -642,6 +761,16 @@
       },
       "PostOut": {
         "properties": {
+          "achievement": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AchievementOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "author": {
             "$ref": "#/components/schemas/UserSummary"
           },
@@ -683,7 +812,11 @@
             "type": "array"
           },
           "kind": {
-            "const": "update",
+            "enum": [
+              "update",
+              "snippet",
+              "achievement"
+            ],
             "title": "Kind",
             "type": "string"
           },
@@ -700,6 +833,16 @@
             },
             "title": "Reactions",
             "type": "array"
+          },
+          "snippet": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SnippetOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "tags": {
             "items": {
@@ -726,6 +869,8 @@
           "tags",
           "mentions",
           "images",
+          "snippet",
+          "achievement",
           "reactions",
           "comment_count",
           "created_at",
@@ -782,6 +927,16 @@
       "PostUpdate": {
         "description": "Fields left out are unchanged. `images` replaces the post's images.",
         "properties": {
+          "achievement": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AchievementIn"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "body_md": {
             "anyOf": [
               {
@@ -1376,6 +1531,394 @@
           "display_name"
         ],
         "title": "SignUpRequest",
+        "type": "object"
+      },
+      "SnippetCreate": {
+        "properties": {
+          "content": {
+            "maxLength": 50000,
+            "minLength": 1,
+            "title": "Content",
+            "type": "string"
+          },
+          "description": {
+            "default": "",
+            "maxLength": 500,
+            "title": "Description",
+            "type": "string"
+          },
+          "filename": {
+            "anyOf": [
+              {
+                "maxLength": 100,
+                "pattern": "^[^/\\\\]+$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Filename"
+          },
+          "language": {
+            "default": "text",
+            "enum": [
+              "text",
+              "bash",
+              "c",
+              "clojure",
+              "cpp",
+              "csharp",
+              "css",
+              "dart",
+              "diff",
+              "dockerfile",
+              "elixir",
+              "erlang",
+              "fsharp",
+              "go",
+              "graphql",
+              "haskell",
+              "hcl",
+              "html",
+              "java",
+              "javascript",
+              "json",
+              "jsx",
+              "julia",
+              "kotlin",
+              "lua",
+              "markdown",
+              "nix",
+              "ocaml",
+              "php",
+              "powershell",
+              "python",
+              "r",
+              "ruby",
+              "rust",
+              "scala",
+              "scss",
+              "sql",
+              "svelte",
+              "swift",
+              "toml",
+              "tsx",
+              "typescript",
+              "vue",
+              "xml",
+              "yaml",
+              "zig"
+            ],
+            "title": "Language",
+            "type": "string"
+          },
+          "title": {
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Title",
+            "type": "string"
+          },
+          "visibility": {
+            "default": "public",
+            "enum": [
+              "public",
+              "friends"
+            ],
+            "title": "Visibility",
+            "type": "string"
+          }
+        },
+        "required": [
+          "title",
+          "content"
+        ],
+        "title": "SnippetCreate",
+        "type": "object"
+      },
+      "SnippetOut": {
+        "properties": {
+          "content": {
+            "title": "Content",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "description": {
+            "title": "Description",
+            "type": "string"
+          },
+          "filename": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Filename"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "language": {
+            "enum": [
+              "text",
+              "bash",
+              "c",
+              "clojure",
+              "cpp",
+              "csharp",
+              "css",
+              "dart",
+              "diff",
+              "dockerfile",
+              "elixir",
+              "erlang",
+              "fsharp",
+              "go",
+              "graphql",
+              "haskell",
+              "hcl",
+              "html",
+              "java",
+              "javascript",
+              "json",
+              "jsx",
+              "julia",
+              "kotlin",
+              "lua",
+              "markdown",
+              "nix",
+              "ocaml",
+              "php",
+              "powershell",
+              "python",
+              "r",
+              "ruby",
+              "rust",
+              "scala",
+              "scss",
+              "sql",
+              "svelte",
+              "swift",
+              "toml",
+              "tsx",
+              "typescript",
+              "vue",
+              "xml",
+              "yaml",
+              "zig"
+            ],
+            "title": "Language",
+            "type": "string"
+          },
+          "line_count": {
+            "title": "Line Count",
+            "type": "integer"
+          },
+          "owner": {
+            "$ref": "#/components/schemas/UserSummary"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          },
+          "visibility": {
+            "enum": [
+              "public",
+              "friends"
+            ],
+            "title": "Visibility",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "owner",
+          "title",
+          "filename",
+          "language",
+          "content",
+          "description",
+          "visibility",
+          "line_count",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "SnippetOut",
+        "type": "object"
+      },
+      "SnippetPage": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/SnippetOut"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          }
+        },
+        "required": [
+          "items",
+          "next_cursor"
+        ],
+        "title": "SnippetPage",
+        "type": "object"
+      },
+      "SnippetUpdate": {
+        "description": "Fields left out are unchanged.",
+        "properties": {
+          "content": {
+            "anyOf": [
+              {
+                "maxLength": 50000,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Content"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "filename": {
+            "anyOf": [
+              {
+                "maxLength": 100,
+                "pattern": "^[^/\\\\]+$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Filename"
+          },
+          "language": {
+            "anyOf": [
+              {
+                "enum": [
+                  "text",
+                  "bash",
+                  "c",
+                  "clojure",
+                  "cpp",
+                  "csharp",
+                  "css",
+                  "dart",
+                  "diff",
+                  "dockerfile",
+                  "elixir",
+                  "erlang",
+                  "fsharp",
+                  "go",
+                  "graphql",
+                  "haskell",
+                  "hcl",
+                  "html",
+                  "java",
+                  "javascript",
+                  "json",
+                  "jsx",
+                  "julia",
+                  "kotlin",
+                  "lua",
+                  "markdown",
+                  "nix",
+                  "ocaml",
+                  "php",
+                  "powershell",
+                  "python",
+                  "r",
+                  "ruby",
+                  "rust",
+                  "scala",
+                  "scss",
+                  "sql",
+                  "svelte",
+                  "swift",
+                  "toml",
+                  "tsx",
+                  "typescript",
+                  "vue",
+                  "xml",
+                  "yaml",
+                  "zig"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Language"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "maxLength": 100,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          },
+          "visibility": {
+            "anyOf": [
+              {
+                "enum": [
+                  "public",
+                  "friends"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Visibility"
+          }
+        },
+        "title": "SnippetUpdate",
         "type": "object"
       },
       "TagOut": {
@@ -2834,6 +3377,110 @@
         ]
       }
     },
+    "/v1/me/pins/{type}/{item_id}": {
+      "delete": {
+        "operationId": "unpinItem",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "type",
+            "required": true,
+            "schema": {
+              "const": "snippet",
+              "title": "Type",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "item_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Item Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Pins"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Unpin Item",
+        "tags": [
+          "snippets"
+        ]
+      },
+      "put": {
+        "operationId": "pinItem",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "type",
+            "required": true,
+            "schema": {
+              "const": "snippet",
+              "title": "Type",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "item_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Item Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Pins"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Pin Item",
+        "tags": [
+          "snippets"
+        ]
+      }
+    },
     "/v1/me/profile": {
       "get": {
         "operationId": "getMyProfile",
@@ -3450,6 +4097,175 @@
         ]
       }
     },
+    "/v1/snippets": {
+      "post": {
+        "operationId": "createSnippet",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SnippetCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SnippetOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Snippet",
+        "tags": [
+          "snippets"
+        ]
+      }
+    },
+    "/v1/snippets/{snippet_id}": {
+      "delete": {
+        "operationId": "deleteSnippet",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "snippet_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Snippet Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Delete Snippet",
+        "tags": [
+          "snippets"
+        ]
+      },
+      "get": {
+        "operationId": "getSnippet",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "snippet_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Snippet Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SnippetOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Snippet",
+        "tags": [
+          "snippets"
+        ]
+      },
+      "patch": {
+        "operationId": "updateSnippet",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "snippet_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Snippet Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SnippetUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SnippetOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Update Snippet",
+        "tags": [
+          "snippets"
+        ]
+      }
+    },
     "/v1/tags/suggest": {
       "get": {
         "operationId": "suggestTags",
@@ -3778,6 +4594,48 @@
         ]
       }
     },
+    "/v1/users/{username}/pins": {
+      "get": {
+        "operationId": "listPins",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "username",
+            "required": true,
+            "schema": {
+              "title": "Username",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Pins"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Pins",
+        "tags": [
+          "snippets"
+        ]
+      }
+    },
     "/v1/users/{username}/posts": {
       "get": {
         "operationId": "listUserPosts",
@@ -3846,6 +4704,77 @@
         "summary": "List User Posts",
         "tags": [
           "posts"
+        ]
+      }
+    },
+    "/v1/users/{username}/snippets": {
+      "get": {
+        "operationId": "listUserSnippets",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "username",
+            "required": true,
+            "schema": {
+              "title": "Username",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "maximum": 50,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SnippetPage"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List User Snippets",
+        "tags": [
+          "snippets"
         ]
       }
     }

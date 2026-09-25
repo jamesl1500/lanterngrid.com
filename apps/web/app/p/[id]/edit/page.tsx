@@ -29,6 +29,7 @@ export default async function EditPostPage({ params }: Props) {
           body_md: post.body_md,
           visibility: post.visibility,
           images: post.images,
+          achievement: post.achievement,
         }}
       />
     </main>

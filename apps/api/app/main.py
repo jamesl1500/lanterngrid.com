@@ -12,6 +12,7 @@ from app.modules.health.router import router as health_router
 from app.modules.media.router import router as media_router
 from app.modules.notifications.router import router as notifications_router
 from app.modules.posts.router import router as posts_router
+from app.modules.snippets.router import router as snippets_router
 from app.modules.social.router import router as social_router
 from app.modules.tags.router import router as tags_router
 from app.modules.users.router import router as users_router
@@ -59,6 +60,7 @@ def create_app() -> FastAPI:
         social_router,
         notifications_router,
         posts_router,
+        snippets_router,
     ):
         app.include_router(router, prefix=API_PREFIX)
     return app

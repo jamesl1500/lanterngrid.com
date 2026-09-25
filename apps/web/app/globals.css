@@ -24,6 +24,21 @@
   line-height: 1.6;
 }
 
+/* Line numbers from a counter, so copying code doesn't copy them. */
+.code-block--numbered pre code {
+  counter-reset: line;
+}
+.code-block--numbered .line::before {
+  counter-increment: line;
+  content: counter(line);
+  display: inline-block;
+  width: 3ch;
+  margin-right: 1.5ch;
+  text-align: right;
+  color: var(--lg-ink-3);
+  user-select: none;
+}
+
 /* Post bodies. Compact on purpose: headings stay small so a post can't shout over the feed. */
 .markdown {
   display: grid;

@@ -6,6 +6,7 @@ import { cache } from 'react'
 
 import { FriendActions } from '@/components/friend-actions'
 import { PostList } from '@/components/post-list'
+import { SnippetCard } from '@/components/snippet-card'
 import { serverApi } from '@/lib/api'
 import { linkKindLabel, shortUrl } from '@/lib/links'
 import { getMe, sessionToken } from '@/lib/session'
@@ -43,10 +44,19 @@ export default async function ProfilePage({ params, searchParams }: Props) {
   const { username } = await params
   const [profile, { cursor }, me] = await Promise.all([getProfile(username), searchParams, getMe()])
   if (!profile) notFound()
-  const { data: posts } = await serverApi(await sessionToken()).GET('/v1/users/{username}/posts', {
-    params: { path: { username: profile.username }, query: { cursor, limit: 20 } },
-    cache: 'no-store',
-  })
+  const api = serverApi(await sessionToken())
+  const path = { username: profile.username }
+  const [{ data: posts }, { data: pins }] = await Promise.all([
+    api.GET('/v1/users/{username}/posts', {
+      params: { path, query: { cursor, limit: 20 } },
+      cache: 'no-store',
+    }),
+    // Pins only head the first page.
+    cursor
+      ? { data: undefined }
+      : api.GET('/v1/users/{username}/pins', { params: { path }, cache: 'no-store' }),
+  ])
+  const pinned = pins?.items.flatMap((pin) => (pin.snippet ? [pin.snippet] : [])) ?? []
   const relationship = profile.relationship
   const isMe = relationship?.status === 'self'
   const accent = accentClasses[profile.accent_color as Accent]
@@ -123,6 +133,14 @@ export default async function ProfilePage({ params, searchParams }: Props) {
                 {profile.friend_count} {profile.friend_count === 1 ? 'friend' : 'friends'}
               </Link>
             </li>
+            <li>
+              <Link
+                href={`/u/${profile.username}/snippets` as Route}
+                className="hover:text-ink hover:underline"
+              >
+                snippets
+              </Link>
+            </li>
             <li>joined {joined.format(new Date(profile.joined_at))}</li>
           </ul>
           {profile.tags.length > 0 ? (
@@ -157,6 +175,19 @@ export default async function ProfilePage({ params, searchParams }: Props) {
           ) : null}
         </div>
       </Card>
+
+      {pinned.length > 0 ? (
+        <section className="grid grid-cols-1 gap-4">
+          <h2 className="border-b-2 border-line-strong pb-2 text-xl font-bold">Pinned</h2>
+          <ul className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            {pinned.map((snippet) => (
+              <li key={snippet.id} className="grid grid-cols-1">
+                <SnippetCard snippet={snippet} maxLines={8} />
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
 
       {profile.friends.length > 0 ? (
         <section className="grid gap-4">

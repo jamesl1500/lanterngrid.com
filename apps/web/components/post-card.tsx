@@ -2,13 +2,21 @@ import { Avatar, Card, cn, KindBadge, Tag, type Accent } from '@lanterngrid/ui'
 import type { Route } from 'next'
 import Link from 'next/link'
 
-import { postEntities, type Post } from '@/lib/posts'
+import { achievementInfo, postEntities, type Post } from '@/lib/posts'
 import { timeAgo } from '@/lib/time'
 
 import { Markdown } from './markdown'
 import { PostImages } from './post-images'
 import { PostMenu } from './post-menu'
 import { ReactionBar } from './reaction-bar'
+import { SnippetCard } from './snippet-card'
+
+// The left edge takes the post kind's accent (full class names so Tailwind can see them).
+const kindEdge: Record<Post['kind'], string> = {
+  update: 'border-l-cyan',
+  snippet: 'border-l-violet',
+  achievement: 'border-l-amber',
+}
 
 type Props = {
   post: Post
@@ -21,8 +29,9 @@ type Props = {
 export function PostCard({ post, viewerId, afterDelete }: Props) {
   const { author } = post
   const profile = `/u/${author.username}` as Route
+  const achievement = post.achievement ? achievementInfo[post.achievement.type] : null
   return (
-    <Card className="border-l-4 border-l-cyan">
+    <Card className={cn('border-l-4', kindEdge[post.kind])}>
       <article>
         <header className="flex items-start gap-3 px-4 pt-4">
           <Link href={profile} className="shrink-0">
@@ -54,6 +63,21 @@ export function PostCard({ post, viewerId, afterDelete }: Props) {
           <KindBadge kind={post.kind} />
           {viewerId === author.id ? <PostMenu postId={post.id} afterDelete={afterDelete} /> : null}
         </header>
+        {post.achievement && achievement ? (
+          <div className="mx-4 mt-3 flex items-center gap-3 border-2 border-amber bg-amber-soft px-4 py-3">
+            <span aria-hidden className="text-3xl leading-none">
+              {achievement.emoji}
+            </span>
+            <div className="min-w-0">
+              <div className="font-mono text-xs tracking-[0.08em] text-amber uppercase">
+                {achievement.label}
+              </div>
+              <div className="font-display text-lg leading-snug font-semibold break-words">
+                {post.achievement.title}
+              </div>
+            </div>
+          </div>
+        ) : null}
         {post.body_md ? (
           <div className="px-4 py-3">
             <Markdown source={post.body_md} entities={postEntities(post)} />
@@ -62,6 +86,17 @@ export function PostCard({ post, viewerId, afterDelete }: Props) {
         {post.images.length > 0 ? (
           <div className={cn('px-4 pb-3', !post.body_md && 'pt-3')}>
             <PostImages images={post.images} />
+          </div>
+        ) : null}
+        {post.kind === 'snippet' ? (
+          <div className={cn('px-4 pb-3', !post.body_md && 'pt-3')}>
+            {post.snippet ? (
+              <SnippetCard snippet={post.snippet} maxLines={10} />
+            ) : (
+              <p className="border border-dashed border-line px-4 py-3 text-sm text-ink-3">
+                This snippet was deleted or isn&apos;t shared with you.
+              </p>
+            )}
           </div>
         ) : null}
         {post.tags.length > 0 ? (

@@ -2,29 +2,49 @@
 
 import { Alert, Avatar, Button, cn, Select, type Accent } from '@lanterngrid/ui'
 import type { Route } from 'next'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useEffect, useRef, useState, type ChangeEvent } from 'react'
 
 import { browserApi } from '@/lib/api'
 import { attempt } from '@/lib/errors'
-import { MAX_IMAGES, MAX_POST_LENGTH, type PostImage, type Visibility } from '@/lib/posts'
+import {
+  achievementInfo,
+  MAX_ACHIEVEMENT_TITLE,
+  MAX_IMAGES,
+  MAX_POST_LENGTH,
+  type Achievement,
+  type AchievementType,
+  type PostImage,
+  type Visibility,
+} from '@/lib/posts'
 import type { Me } from '@/lib/session'
 import { imageProblem, imageTypes, uploadFile } from '@/lib/uploads'
 
 import { AutocompleteTextarea } from './autocomplete-textarea'
-
 import { MarkdownPreview } from './markdown-preview'
 
 type Props = {
   me: Pick<Me, 'display_name' | 'avatar_url' | 'accent_color'>
   /** Set to edit an existing post instead of writing a new one. */
-  editing?: { id: string; body_md: string; visibility: Visibility; images: PostImage[] }
+  editing?: {
+    id: string
+    body_md: string
+    visibility: Visibility
+    images: PostImage[]
+    achievement: Achievement | null
+  }
 }
+
+const achievementTypes = Object.entries(achievementInfo) as [
+  AchievementType,
+  (typeof achievementInfo)[AchievementType],
+][]
 
 /** An image in the post. `key` is null while it uploads; `preview` is a blob or public URL. */
 type Attachment = { id: string; preview: string; key: string | null; alt: string }
 
-/** Write or edit a post: Markdown with a preview, and @/# autocomplete. */
+/** Write or edit a post (or an achievement): Markdown with a preview, and @/# autocomplete. */
 export function Composer({ me, editing }: Props) {
   const router = useRouter()
   const fileInput = useRef<HTMLInputElement>(null)
@@ -33,6 +53,8 @@ export function Composer({ me, editing }: Props) {
   const [images, setImages] = useState<Attachment[]>(
     () => editing?.images.map((i) => ({ id: i.key, preview: i.url, key: i.key, alt: i.alt })) ?? [],
   )
+  // Null for a plain update; set while writing (or editing) an achievement.
+  const [achievement, setAchievement] = useState<Achievement | null>(editing?.achievement ?? null)
   const [tab, setTab] = useState<'write' | 'preview'>('write')
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
@@ -41,7 +63,7 @@ export function Composer({ me, editing }: Props) {
 
   const remaining = MAX_POST_LENGTH - body.length
   const uploading = images.some((i) => i.key === null)
-  const empty = !body.trim() && images.length === 0
+  const empty = achievement ? !achievement.title.trim() : !body.trim() && images.length === 0
 
   useEffect(() => {
     const urls = blobs.current
@@ -90,16 +112,19 @@ export function Composer({ me, editing }: Props) {
     if (empty || uploading || remaining < 0 || busy) return
     setBusy(true)
     setError(null)
-    const attached = images.flatMap((i) => (i.key ? [{ key: i.key, alt: i.alt }] : []))
+    const fields = {
+      body_md: body,
+      visibility,
+      images: images.flatMap((i) => (i.key ? [{ key: i.key, alt: i.alt }] : [])),
+      achievement: achievement && { ...achievement, title: achievement.title.trim() },
+    }
     const result = await attempt(() =>
       editing
         ? browserApi.PATCH('/v1/posts/{post_id}', {
             params: { path: { post_id: editing.id } },
-            body: { body_md: body, visibility, images: attached },
+            body: fields,
           })
-        : browserApi.POST('/v1/posts', {
-            body: { body_md: body, visibility, images: attached },
-          }),
+        : browserApi.POST('/v1/posts', { body: fields }),
     )
     setBusy(false)
     if (!result.ok) {
@@ -110,6 +135,7 @@ export function Composer({ me, editing }: Props) {
       router.push(`/p/${editing.id}` as Route)
     } else {
       setBody('')
+      setAchievement(null)
       images.forEach((i) => release(i.preview))
       setImages([])
       setTab('write')
@@ -122,6 +148,9 @@ export function Composer({ me, editing }: Props) {
       'border-b-4 px-3 py-1.5 font-mono text-xs uppercase tracking-[0.08em]',
       tab === t ? 'border-cyan text-ink' : 'border-transparent text-ink-3 hover:text-ink',
     )
+
+  const headerLink =
+    'grid h-7 place-items-center border border-line px-2 font-mono text-xs text-ink-2 hover:border-line-strong hover:text-ink'
 
   return (
     <section
@@ -155,7 +184,64 @@ export function Composer({ me, editing }: Props) {
             Preview
           </button>
         </div>
+        {editing ? null : (
+          <div className="ml-auto flex gap-1.5 pb-1.5">
+            <button
+              type="button"
+              aria-pressed={achievement !== null}
+              aria-label="Achievement"
+              title="Celebrate something you did"
+              onClick={() => setAchievement((a) => (a ? null : { type: 'shipped', title: '' }))}
+              className={cn(
+                headerLink,
+                achievement && 'border-amber bg-amber-soft text-amber hover:border-amber',
+              )}
+            >
+              <span aria-hidden>
+                🏆<span className="hidden sm:inline"> achievement</span>
+              </span>
+            </button>
+            <Link
+              href="/snippets/new"
+              aria-label="New snippet"
+              title="Save a snippet of code"
+              className={headerLink}
+            >
+              <span aria-hidden>
+                {'{ }'}
+                <span className="hidden sm:inline"> snippet</span>
+              </span>
+            </Link>
+          </div>
+        )}
       </div>
+
+      {achievement ? (
+        <div className="grid grid-cols-1 gap-2 border-b border-line bg-amber-soft px-4 py-3 sm:grid-cols-[12rem_1fr]">
+          <Select
+            aria-label="Kind of achievement"
+            value={achievement.type}
+            onChange={(e) =>
+              setAchievement({ ...achievement, type: e.target.value as AchievementType })
+            }
+            className="[&_select]:h-9 [&_select]:text-sm"
+          >
+            {achievementTypes.map(([type, info]) => (
+              <option key={type} value={type}>
+                {info.emoji} {info.label}
+              </option>
+            ))}
+          </Select>
+          <input
+            aria-label="What did you do?"
+            placeholder="What did you do? e.g. Shipped dark mode"
+            maxLength={MAX_ACHIEVEMENT_TITLE}
+            value={achievement.title}
+            onChange={(e) => setAchievement({ ...achievement, title: e.target.value })}
+            className="h-9 w-full border-2 border-line-strong bg-surface px-3 text-sm placeholder:text-ink-3 focus:border-amber focus:outline-none"
+          />
+        </div>
+      ) : null}
 
       <div className="relative">
         {tab === 'write' ? (
@@ -166,7 +252,11 @@ export function Composer({ me, editing }: Props) {
             onSubmit={() => void submit()}
             triggers={['@', '#']}
             rows={editing ? 8 : 4}
-            placeholder="What did you ship, break or learn? Markdown works, ```lang for code, #tags and @people too."
+            placeholder={
+              achievement
+                ? 'Tell the story (optional). Markdown, #tags and @people work here too.'
+                : 'What did you ship, break or learn? Markdown works, ```lang for code, #tags and @people too.'
+            }
             className="min-h-28"
           />
         ) : (
