@@ -25,7 +25,12 @@ export async function SiteHeader() {
                   href={`/u/${me.username}`}
                   className="flex items-center gap-2 font-mono text-sm text-ink-2 hover:text-ink"
                 >
-                  <Avatar name={me.display_name} accent={me.accent_color as Accent} size="sm" />
+                  <Avatar
+                    name={me.display_name}
+                    src={me.avatar_url}
+                    accent={me.accent_color as Accent}
+                    size="sm"
+                  />
                   <span className="hidden sm:inline">@{me.username}</span>
                 </Link>
               ) : (

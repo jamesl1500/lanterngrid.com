@@ -16,3 +16,20 @@ export function Input({ className, ...props }: ComponentProps<'input'>) {
 export function Textarea({ className, ...props }: ComponentProps<'textarea'>) {
   return <textarea className={cn(control, 'min-h-24 py-2', className)} {...props} />
 }
+
+/** Native select, restyled. Native keeps keyboard, mobile pickers and autofill for free. */
+export function Select({ className, children, ...props }: ComponentProps<'select'>) {
+  return (
+    <span className={cn('relative block', className)}>
+      <select className={cn(control, 'h-10 cursor-pointer appearance-none pr-9')} {...props}>
+        {children}
+      </select>
+      <span
+        aria-hidden
+        className="pointer-events-none absolute inset-y-0 right-3 flex items-center font-mono text-xs text-ink-3"
+      >
+        ▾
+      </span>
+    </span>
+  )
+}

@@ -1,6 +1,20 @@
 {
   "components": {
     "schemas": {
+      "AttachImage": {
+        "properties": {
+          "key": {
+            "maxLength": 300,
+            "title": "Key",
+            "type": "string"
+          }
+        },
+        "required": [
+          "key"
+        ],
+        "title": "AttachImage",
+        "type": "object"
+      },
       "AuthProviders": {
         "properties": {
           "github": {
@@ -79,6 +93,24 @@
         "title": "HealthResponse",
         "type": "object"
       },
+      "LinksUpdate": {
+        "description": "The full list, in display order.",
+        "properties": {
+          "links": {
+            "items": {
+              "$ref": "#/components/schemas/ProfileLinkIn"
+            },
+            "maxItems": 8,
+            "title": "Links",
+            "type": "array"
+          }
+        },
+        "required": [
+          "links"
+        ],
+        "title": "LinksUpdate",
+        "type": "object"
+      },
       "Me": {
         "description": "The signed-in account, as the web app needs it on every page.",
         "properties": {
@@ -93,6 +125,17 @@
             ],
             "title": "Accent Color",
             "type": "string"
+          },
+          "avatar_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avatar Url"
           },
           "created_at": {
             "format": "date-time",
@@ -162,6 +205,7 @@
           "display_name",
           "headline",
           "accent_color",
+          "avatar_url",
           "has_password",
           "github_login",
           "created_at"
@@ -188,6 +232,14 @@
               }
             ],
             "title": "Headline"
+          },
+          "tags": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Tags",
+            "type": "array"
           },
           "username": {
             "title": "Username",
@@ -235,6 +287,100 @@
         "title": "PasswordResetRequest",
         "type": "object"
       },
+      "ProfileImages": {
+        "properties": {
+          "avatar_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avatar Url"
+          },
+          "banner_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Banner Url"
+          }
+        },
+        "required": [
+          "avatar_url",
+          "banner_url"
+        ],
+        "title": "ProfileImages",
+        "type": "object"
+      },
+      "ProfileLinkIn": {
+        "properties": {
+          "kind": {
+            "enum": [
+              "github",
+              "gitlab",
+              "linkedin",
+              "x",
+              "mastodon",
+              "bluesky",
+              "website",
+              "blog",
+              "youtube",
+              "other"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "url": {
+            "maxLength": 300,
+            "minLength": 1,
+            "title": "Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "url"
+        ],
+        "title": "ProfileLinkIn",
+        "type": "object"
+      },
+      "ProfileLinkOut": {
+        "properties": {
+          "kind": {
+            "enum": [
+              "github",
+              "gitlab",
+              "linkedin",
+              "x",
+              "mastodon",
+              "bluesky",
+              "website",
+              "blog",
+              "youtube",
+              "other"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "url": {
+            "title": "Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "url"
+        ],
+        "title": "ProfileLinkOut",
+        "type": "object"
+      },
       "ProfileSettings": {
         "properties": {
           "accent_color": {
@@ -248,6 +394,28 @@
             ],
             "title": "Accent Color",
             "type": "string"
+          },
+          "avatar_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avatar Url"
+          },
+          "banner_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Banner Url"
           },
           "bio": {
             "anyOf": [
@@ -275,6 +443,13 @@
             ],
             "title": "Headline"
           },
+          "links": {
+            "items": {
+              "$ref": "#/components/schemas/ProfileLinkOut"
+            },
+            "title": "Links",
+            "type": "array"
+          },
           "location": {
             "anyOf": [
               {
@@ -285,6 +460,13 @@
               }
             ],
             "title": "Location"
+          },
+          "tags": {
+            "items": {
+              "$ref": "#/components/schemas/TagOut"
+            },
+            "title": "Tags",
+            "type": "array"
           },
           "website": {
             "anyOf": [
@@ -304,7 +486,11 @@
           "bio",
           "location",
           "website",
-          "accent_color"
+          "accent_color",
+          "avatar_url",
+          "banner_url",
+          "links",
+          "tags"
         ],
         "title": "ProfileSettings",
         "type": "object"
@@ -410,6 +596,28 @@
             "title": "Accent Color",
             "type": "string"
           },
+          "avatar_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avatar Url"
+          },
+          "banner_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Banner Url"
+          },
           "bio": {
             "anyOf": [
               {
@@ -441,6 +649,13 @@
             "title": "Joined At",
             "type": "string"
           },
+          "links": {
+            "items": {
+              "$ref": "#/components/schemas/ProfileLinkOut"
+            },
+            "title": "Links",
+            "type": "array"
+          },
           "location": {
             "anyOf": [
               {
@@ -451,6 +666,13 @@
               }
             ],
             "title": "Location"
+          },
+          "tags": {
+            "items": {
+              "$ref": "#/components/schemas/TagOut"
+            },
+            "title": "Tags",
+            "type": "array"
           },
           "username": {
             "title": "Username",
@@ -476,6 +698,10 @@
           "location",
           "website",
           "accent_color",
+          "avatar_url",
+          "banner_url",
+          "links",
+          "tags",
           "joined_at"
         ],
         "title": "PublicProfile",
@@ -528,6 +754,112 @@
           "display_name"
         ],
         "title": "SignUpRequest",
+        "type": "object"
+      },
+      "TagOut": {
+        "properties": {
+          "kind": {
+            "enum": [
+              "language",
+              "tool",
+              "topic"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "slug": {
+            "title": "Slug",
+            "type": "string"
+          }
+        },
+        "required": [
+          "slug",
+          "name",
+          "kind"
+        ],
+        "title": "TagOut",
+        "type": "object"
+      },
+      "TagsUpdate": {
+        "description": "The full list, in order. Tags nobody has used yet are created.",
+        "properties": {
+          "tags": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Tags",
+            "type": "array"
+          }
+        },
+        "required": [
+          "tags"
+        ],
+        "title": "TagsUpdate",
+        "type": "object"
+      },
+      "UploadRequest": {
+        "properties": {
+          "content_type": {
+            "enum": [
+              "image/png",
+              "image/jpeg",
+              "image/webp",
+              "image/gif"
+            ],
+            "title": "Content Type",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "avatar",
+              "banner"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "size": {
+            "exclusiveMinimum": 0.0,
+            "title": "Size",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "kind",
+          "content_type",
+          "size"
+        ],
+        "title": "UploadRequest",
+        "type": "object"
+      },
+      "UploadTicket": {
+        "description": "PUT the file to `upload_url` with exactly these headers, then attach `key`.",
+        "properties": {
+          "headers": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Headers",
+            "type": "object"
+          },
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "upload_url": {
+            "title": "Upload Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "key",
+          "upload_url",
+          "headers"
+        ],
+        "title": "UploadTicket",
         "type": "object"
       },
       "UsernameAvailability": {
@@ -932,6 +1264,151 @@
         ]
       }
     },
+    "/v1/me/images/{kind}": {
+      "delete": {
+        "operationId": "removeMyImage",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "kind",
+            "required": true,
+            "schema": {
+              "enum": [
+                "avatar",
+                "banner"
+              ],
+              "title": "Kind",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProfileImages"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Remove My Image",
+        "tags": [
+          "media"
+        ]
+      },
+      "put": {
+        "operationId": "setMyImage",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "kind",
+            "required": true,
+            "schema": {
+              "enum": [
+                "avatar",
+                "banner"
+              ],
+              "title": "Kind",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AttachImage"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProfileImages"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Set My Image",
+        "tags": [
+          "media"
+        ]
+      }
+    },
+    "/v1/me/links": {
+      "put": {
+        "operationId": "setMyLinks",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LinksUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ProfileLinkOut"
+                  },
+                  "title": "Response Setmylinks",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Set My Links",
+        "tags": [
+          "users"
+        ]
+      }
+    },
     "/v1/me/onboarding": {
       "post": {
         "operationId": "completeOnboarding",
@@ -1030,6 +1507,152 @@
         "summary": "Update My Profile",
         "tags": [
           "users"
+        ]
+      }
+    },
+    "/v1/me/tags": {
+      "put": {
+        "operationId": "setMyTags",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TagsUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/TagOut"
+                  },
+                  "title": "Response Setmytags",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Set My Tags",
+        "tags": [
+          "tags"
+        ]
+      }
+    },
+    "/v1/me/uploads": {
+      "post": {
+        "operationId": "createUpload",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UploadRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UploadTicket"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Upload",
+        "tags": [
+          "media"
+        ]
+      }
+    },
+    "/v1/tags/suggest": {
+      "get": {
+        "operationId": "suggestTags",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "schema": {
+              "default": "",
+              "maxLength": 32,
+              "title": "Q",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 8,
+              "maximum": 20,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/TagOut"
+                  },
+                  "title": "Response Suggesttags",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Suggest Tags",
+        "tags": [
+          "tags"
         ]
       }
     },

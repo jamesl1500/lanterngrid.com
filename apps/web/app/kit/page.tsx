@@ -1,4 +1,5 @@
 import { AccentPickerDemo } from './accent-picker-demo'
+import { TagInputDemo } from './tag-input-demo'
 import {
   accents,
   accentClasses,
@@ -10,6 +11,7 @@ import {
   CardHeader,
   contentKinds,
   KindBadge,
+  SelectField,
   Tag,
   TextAreaField,
   TextField,
@@ -114,6 +116,12 @@ export default function KitPage() {
             error="Start and end with a letter or number."
           />
           <TextAreaField id="kit-bio" label="Bio" hint="Up to 1000 characters." />
+          <SelectField id="kit-link-kind" label="Link type" defaultValue="github">
+            <option value="github">GitHub</option>
+            <option value="mastodon">Mastodon</option>
+            <option value="blog">Blog</option>
+          </SelectField>
+          <TagInputDemo />
           <AccentPickerDemo />
         </div>
         <div className="grid max-w-lg gap-2">

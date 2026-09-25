@@ -45,6 +45,10 @@ land in Mailpit at http://localhost:8025. To try GitHub sign-in, create a GitHub
 the callback URL `http://localhost:3000/api/v1/auth/github/callback` and put its client id and
 secret in `.env`.
 
+Avatars and banners upload straight from the browser to MinIO (console at
+http://localhost:9001, user and password `lanterngrid`); `pnpm services:up` creates the
+`lanterngrid-media` bucket.
+
 The system status panel on the home page shows whether the API,
 Postgres and Redis are reachable. The UI kit lives at http://localhost:3000/kit and the API
 docs at http://localhost:8000/docs.
@@ -72,3 +76,18 @@ New migration: `cd apps/api && uv run alembic revision --autogenerate -m "add us
   `GITHUB_CLIENT_ID` and `GITHUB_CLIENT_SECRET` (callback URL
   `https://<web domain>/api/v1/auth/github/callback`). Use `alembic upgrade head` as the
   pre-deploy command.
+- **Uploads** go to a Cloudflare R2 bucket. Turn on public access (r2.dev or a custom domain),
+  create an R2 API token with object read and write on the bucket, and set the `STORAGE_*`
+  variables on the API (see `.env.example`). Browsers upload with presigned PUTs, so the bucket
+  needs this CORS policy:
+
+  ```json
+  [
+    {
+      "AllowedOrigins": ["https://<web domain>"],
+      "AllowedMethods": ["PUT"],
+      "AllowedHeaders": ["Content-Type"],
+      "MaxAgeSeconds": 3600
+    }
+  ]
+  ```

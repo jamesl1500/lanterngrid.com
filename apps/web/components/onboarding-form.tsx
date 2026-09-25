@@ -1,15 +1,16 @@
 'use client'
 
 import { zodResolver } from '@hookform/resolvers/zod'
-import { Alert, Button, TextField } from '@lanterngrid/ui'
+import { Alert, Button, Field, TagInput, TextField } from '@lanterngrid/ui'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
-import { useForm, useWatch } from 'react-hook-form'
+import { Controller, useForm, useWatch } from 'react-hook-form'
 import type { z } from 'zod'
 
 import { browserApi } from '@/lib/api'
 import { attempt } from '@/lib/errors'
 import { applyFieldErrors } from '@/lib/forms'
+import { MAX_TAGS, suggestTags } from '@/lib/tags'
 import { onboardingSchema, USERNAME_PATTERN } from '@/lib/validation'
 
 type Values = z.infer<typeof onboardingSchema>
@@ -40,7 +41,12 @@ export function OnboardingForm({
     formState: { errors, isSubmitting },
   } = useForm<Values>({
     resolver: zodResolver(onboardingSchema),
-    defaultValues: { username: suggestedUsername ?? '', display_name: displayName, headline: '' },
+    defaultValues: {
+      username: suggestedUsername ?? '',
+      display_name: displayName,
+      headline: '',
+      tags: [],
+    },
   })
 
   const username = useWatch({ control, name: 'username' }).trim()
@@ -127,6 +133,29 @@ export function OnboardingForm({
         error={errors.headline?.message}
         {...register('headline')}
       />
+      <Field
+        id="tags"
+        label="Your stack"
+        hint="Optional. Languages, tools and topics you work with. Press Enter to add."
+        error={errors.tags?.message}
+      >
+        <Controller
+          control={control}
+          name="tags"
+          render={({ field }) => (
+            <TagInput
+              id="tags"
+              value={field.value}
+              onChange={field.onChange}
+              suggest={suggestTags}
+              max={MAX_TAGS}
+              accent="violet"
+              placeholder="TypeScript, Postgres, distributed systems…"
+              aria-describedby={errors.tags ? 'tags-error' : 'tags-hint'}
+            />
+          )}
+        />
+      </Field>
       <Button type="submit" size="lg" variant="accent" disabled={isSubmitting}>
         {isSubmitting ? 'Saving…' : 'Create my profile'}
       </Button>
