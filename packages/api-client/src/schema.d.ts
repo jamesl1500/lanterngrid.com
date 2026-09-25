@@ -482,6 +482,24 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/me/pins/{type}/{item_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Pin Item */
+        put: operations["pinItem"];
+        post?: never;
+        /** Unpin Item */
+        delete: operations["unpinItem"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/me/profile": {
         parameters: {
             query?: never;
@@ -623,6 +641,42 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/snippets": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Create Snippet */
+        post: operations["createSnippet"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/snippets/{snippet_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Snippet */
+        get: operations["getSnippet"];
+        put?: never;
+        post?: never;
+        /** Delete Snippet */
+        delete: operations["deleteSnippet"];
+        options?: never;
+        head?: never;
+        /** Update Snippet */
+        patch: operations["updateSnippet"];
+        trace?: never;
+    };
     "/v1/tags/suggest": {
         parameters: {
             query?: never;
@@ -725,6 +779,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/users/{username}/pins": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Pins */
+        get: operations["listPins"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/users/{username}/posts": {
         parameters: {
             query?: never;
@@ -742,10 +813,47 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/users/{username}/snippets": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List User Snippets */
+        get: operations["listUserSnippets"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** AchievementIn */
+        AchievementIn: {
+            /** Title */
+            title: string;
+            /**
+             * Type
+             * @enum {string}
+             */
+            type: "shipped" | "launched" | "promoted" | "new_job" | "certified" | "first_oss_merge" | "milestone";
+        };
+        /** AchievementOut */
+        AchievementOut: {
+            /** Title */
+            title: string;
+            /**
+             * Type
+             * @enum {string}
+             */
+            type: "shipped" | "launched" | "promoted" | "new_job" | "certified" | "first_oss_merge" | "milestone";
+        };
         /** AttachImage */
         AttachImage: {
             /** Key */
@@ -968,8 +1076,26 @@ export interface components {
              */
             email: string;
         };
+        /** PinOut */
+        PinOut: {
+            snippet?: components["schemas"]["SnippetOut"] | null;
+            /**
+             * Type
+             * @constant
+             */
+            type: "snippet";
+        };
+        /**
+         * Pins
+         * @description In the order they were pinned. Only what the viewer can see.
+         */
+        Pins: {
+            /** Items */
+            items: components["schemas"]["PinOut"][];
+        };
         /** PostCreate */
         PostCreate: {
+            achievement?: components["schemas"]["AchievementIn"] | null;
             /**
              * Body Md
              * @default
@@ -980,6 +1106,8 @@ export interface components {
              * @default []
              */
             images: components["schemas"]["PostImageIn"][];
+            /** Snippet Id */
+            snippet_id?: string | null;
             /**
              * Visibility
              * @default public
@@ -1011,6 +1139,7 @@ export interface components {
         };
         /** PostOut */
         PostOut: {
+            achievement: components["schemas"]["AchievementOut"] | null;
             author: components["schemas"]["UserSummary"];
             /** Body Md */
             body_md: string;
@@ -1032,13 +1161,14 @@ export interface components {
             images: components["schemas"]["PostImageOut"][];
             /**
              * Kind
-             * @constant
+             * @enum {string}
              */
-            kind: "update";
+            kind: "update" | "snippet" | "achievement";
             /** Mentions */
             mentions: string[];
             /** Reactions */
             reactions: components["schemas"]["ReactionCount"][];
+            snippet: components["schemas"]["SnippetOut"] | null;
             /** Tags */
             tags: components["schemas"]["TagOut"][];
             /**
@@ -1064,6 +1194,7 @@ export interface components {
          * @description Fields left out are unchanged. `images` replaces the post's images.
          */
         PostUpdate: {
+            achievement?: components["schemas"]["AchievementIn"] | null;
             /** Body Md */
             body_md?: string | null;
             /** Images */
@@ -1224,6 +1355,96 @@ export interface components {
             email: string;
             /** Password */
             password: string;
+        };
+        /** SnippetCreate */
+        SnippetCreate: {
+            /** Content */
+            content: string;
+            /**
+             * Description
+             * @default
+             */
+            description: string;
+            /** Filename */
+            filename?: string | null;
+            /**
+             * Language
+             * @default text
+             * @enum {string}
+             */
+            language: "text" | "bash" | "c" | "clojure" | "cpp" | "csharp" | "css" | "dart" | "diff" | "dockerfile" | "elixir" | "erlang" | "fsharp" | "go" | "graphql" | "haskell" | "hcl" | "html" | "java" | "javascript" | "json" | "jsx" | "julia" | "kotlin" | "lua" | "markdown" | "nix" | "ocaml" | "php" | "powershell" | "python" | "r" | "ruby" | "rust" | "scala" | "scss" | "sql" | "svelte" | "swift" | "toml" | "tsx" | "typescript" | "vue" | "xml" | "yaml" | "zig";
+            /** Title */
+            title: string;
+            /**
+             * Visibility
+             * @default public
+             * @enum {string}
+             */
+            visibility: "public" | "friends";
+        };
+        /** SnippetOut */
+        SnippetOut: {
+            /** Content */
+            content: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Description */
+            description: string;
+            /** Filename */
+            filename: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Language
+             * @enum {string}
+             */
+            language: "text" | "bash" | "c" | "clojure" | "cpp" | "csharp" | "css" | "dart" | "diff" | "dockerfile" | "elixir" | "erlang" | "fsharp" | "go" | "graphql" | "haskell" | "hcl" | "html" | "java" | "javascript" | "json" | "jsx" | "julia" | "kotlin" | "lua" | "markdown" | "nix" | "ocaml" | "php" | "powershell" | "python" | "r" | "ruby" | "rust" | "scala" | "scss" | "sql" | "svelte" | "swift" | "toml" | "tsx" | "typescript" | "vue" | "xml" | "yaml" | "zig";
+            /** Line Count */
+            line_count: number;
+            owner: components["schemas"]["UserSummary"];
+            /** Title */
+            title: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+            /**
+             * Visibility
+             * @enum {string}
+             */
+            visibility: "public" | "friends";
+        };
+        /** SnippetPage */
+        SnippetPage: {
+            /** Items */
+            items: components["schemas"]["SnippetOut"][];
+            /** Next Cursor */
+            next_cursor: string | null;
+        };
+        /**
+         * SnippetUpdate
+         * @description Fields left out are unchanged.
+         */
+        SnippetUpdate: {
+            /** Content */
+            content?: string | null;
+            /** Description */
+            description?: string | null;
+            /** Filename */
+            filename?: string | null;
+            /** Language */
+            language?: ("text" | "bash" | "c" | "clojure" | "cpp" | "csharp" | "css" | "dart" | "diff" | "dockerfile" | "elixir" | "erlang" | "fsharp" | "go" | "graphql" | "haskell" | "hcl" | "html" | "java" | "javascript" | "json" | "jsx" | "julia" | "kotlin" | "lua" | "markdown" | "nix" | "ocaml" | "php" | "powershell" | "python" | "r" | "ruby" | "rust" | "scala" | "scss" | "sql" | "svelte" | "swift" | "toml" | "tsx" | "typescript" | "vue" | "xml" | "yaml" | "zig") | null;
+            /** Title */
+            title?: string | null;
+            /** Visibility */
+            visibility?: ("public" | "friends") | null;
         };
         /** TagOut */
         TagOut: {
@@ -2198,6 +2419,70 @@ export interface operations {
             };
         };
     };
+    pinItem: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                type: "snippet";
+                item_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Pins"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    unpinItem: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                type: "snippet";
+                item_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Pins"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     getMyProfile: {
         parameters: {
             query?: never;
@@ -2610,6 +2895,134 @@ export interface operations {
             };
         };
     };
+    createSnippet: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SnippetCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SnippetOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    getSnippet: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                snippet_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SnippetOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    deleteSnippet: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                snippet_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    updateSnippet: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                snippet_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SnippetUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SnippetOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     suggestTags: {
         parameters: {
             query?: {
@@ -2803,6 +3216,37 @@ export interface operations {
             };
         };
     };
+    listPins: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                username: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Pins"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     listUserPosts: {
         parameters: {
             query?: {
@@ -2824,6 +3268,40 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PostPage"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    listUserSnippets: {
+        parameters: {
+            query?: {
+                cursor?: string | null;
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                username: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SnippetPage"];
                 };
             };
             /** @description Validation Error */

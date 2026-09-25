@@ -26,8 +26,12 @@ class Post(Base):
 
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid7)
     author_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
-    # update now; snippet, repo and achievement arrive in Phase 4.
+    # update, snippet or achievement; repo arrives with repo sharing.
     kind: Mapped[str] = mapped_column(String(16), default="update", server_default="update")
+    # The snippet a snippet post shares.
+    snippet_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("snippets.id", ondelete="SET NULL")
+    )
     body_md: Mapped[str] = mapped_column(Text)
     # public or friends.
     visibility: Mapped[str] = mapped_column(String(16), default="public")
@@ -101,3 +105,15 @@ class Comment(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     author: Mapped[User] = relationship(lazy="joined")
+
+
+class Achievement(Base):
+    """What an achievement post celebrates."""
+
+    __tablename__ = "achievements"
+
+    post_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("posts.id", ondelete="CASCADE"), primary_key=True
+    )
+    type: Mapped[str] = mapped_column(String(24))
+    title: Mapped[str] = mapped_column(String(100))

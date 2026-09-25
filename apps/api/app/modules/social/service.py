@@ -84,6 +84,26 @@ def blocked_either_way(
     )
 
 
+def can_see(
+    viewer_id: uuid.UUID | None,
+    author_id: InstrumentedAttribute[uuid.UUID],
+    visibility: InstrumentedAttribute[str],
+) -> ColumnElement[bool]:
+    """Whether the viewer may see something with this author and public/friends visibility:
+    public things, their own, and their friends' friends-only ones, minus anything from people
+    either side has blocked. Signed out (None), only public things."""
+    if viewer_id is None:
+        return visibility == "public"
+    return and_(
+        ~blocked_either_way(viewer_id, author_id),
+        or_(
+            visibility == "public",
+            author_id == viewer_id,
+            author_id.in_(friend_ids_of(viewer_id)),
+        ),
+    )
+
+
 async def has_blocked(db: AsyncSession, blocker_id: uuid.UUID, blocked_id: uuid.UUID) -> bool:
     return await db.get(Block, (blocker_id, blocked_id)) is not None
 

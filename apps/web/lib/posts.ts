@@ -9,6 +9,8 @@ export type Visibility = Schemas['PostCreate']['visibility']
 export type Comment = Schemas['CommentOut']
 export type ReactionKind = Schemas['ReactionCount']['kind']
 export type ReactionCount = Schemas['ReactionCount']
+export type Achievement = Schemas['AchievementIn']
+export type AchievementType = Achievement['type']
 
 export const MAX_POST_LENGTH = 5000
 export const MAX_COMMENT_LENGTH = 2000
@@ -21,6 +23,18 @@ export const reactionInfo: Record<ReactionKind, { emoji: string; label: string }
   idea: { emoji: '💡', label: 'Insightful' },
   laugh: { emoji: '😄', label: 'Funny' },
   eyes: { emoji: '👀', label: 'Watching' },
+}
+
+export const MAX_ACHIEVEMENT_TITLE = 100
+
+export const achievementInfo: Record<AchievementType, { emoji: string; label: string }> = {
+  shipped: { emoji: '🚢', label: 'Shipped' },
+  launched: { emoji: '🚀', label: 'Launched' },
+  promoted: { emoji: '📈', label: 'Promoted' },
+  new_job: { emoji: '💼', label: 'New job' },
+  certified: { emoji: '🎓', label: 'Certified' },
+  first_oss_merge: { emoji: '🔀', label: 'First open source merge' },
+  milestone: { emoji: '🏁', label: 'Milestone' },
 }
 
 /** Every reaction, in the order the API returns them. */
