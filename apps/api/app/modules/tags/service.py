@@ -68,3 +68,7 @@ async def suggest(db: AsyncSession, query: str, limit: int) -> list[TagOut]:
         # Nothing typed yet: the stacks people list most, curated ones first.
         stmt = stmt.order_by(popularity.desc(), Tag.curated.desc(), Tag.slug)
     return [to_out(t) for t in await db.scalars(stmt.limit(limit))]
+
+
+async def get(db: AsyncSession, slug: str) -> Tag | None:
+    return (await db.execute(select(Tag).where(Tag.slug == slug.lower()))).scalar_one_or_none()

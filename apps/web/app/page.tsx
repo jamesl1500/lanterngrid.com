@@ -8,6 +8,8 @@ import { SamplePost } from '@/components/sample-post'
 import { githubStartUrl } from '@/lib/routes'
 import { getMe, getProviders } from '@/lib/session'
 
+import { Feed } from './feed'
+
 const features: { kind: ContentKind; title: string; body: string }[] = [
   {
     kind: 'update',
@@ -69,7 +71,16 @@ async function HeroActions() {
   )
 }
 
-export default function HomePage() {
+type Props = { searchParams: Promise<{ cursor?: string }> }
+
+/** Your feed once you have a username; the landing page for everyone else. */
+export default async function HomePage({ searchParams }: Props) {
+  const me = await getMe()
+  if (me?.username) return <Feed me={{ ...me, username: me.username }} {...await searchParams} />
+  return <Landing />
+}
+
+function Landing() {
   return (
     <main className="mx-auto grid max-w-6xl gap-14 px-4 py-10">
       <section className="grid items-start gap-10 lg:grid-cols-[1.1fr_1fr]">

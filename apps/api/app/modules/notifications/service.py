@@ -40,6 +40,7 @@ async def page(
                 id=n.id,
                 kind=n.kind,
                 actor=summarize(n.actor),
+                subject_id=n.subject_id,
                 created_at=n.created_at,
                 read=n.read_at is not None,
             )

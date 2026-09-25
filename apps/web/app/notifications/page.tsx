@@ -21,6 +21,11 @@ function describe(note: Note): { text: string; href: Route } {
         text: 'accepted your friend request.',
         href: `/u/${note.actor.username}` as Route,
       }
+    case 'mention':
+      return {
+        text: 'mentioned you in a post.',
+        href: (note.subject_id ? `/p/${note.subject_id}` : '/') as Route,
+      }
   }
 }
 
@@ -45,7 +50,7 @@ export default async function NotificationsPage({
       {data.items.length === 0 ? (
         <Card className="grid place-items-center gap-2 px-6 py-12 text-center">
           <span className="label">all quiet</span>
-          <p className="max-w-[40ch] text-ink-2">Friend requests and replies will show up here.</p>
+          <p className="max-w-[40ch] text-ink-2">Friend requests and mentions will show up here.</p>
         </Card>
       ) : (
         <Card>

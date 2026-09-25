@@ -1,2 +1,92 @@
 @import 'tailwindcss';
 @import '@lanterngrid/ui/styles.css';
+
+/* Code highlighting: Shiki's css-variables theme, mapped onto the site's tokens. */
+:root {
+  --shiki-foreground: var(--lg-ink);
+  --shiki-background: transparent;
+  --shiki-token-keyword: var(--lg-magenta);
+  --shiki-token-constant: var(--lg-lime);
+  --shiki-token-string: var(--lg-amber);
+  --shiki-token-string-expression: var(--lg-amber);
+  --shiki-token-comment: var(--lg-ink-3);
+  --shiki-token-parameter: var(--lg-cyan);
+  --shiki-token-function: var(--lg-violet);
+  --shiki-token-punctuation: var(--lg-ink-2);
+  --shiki-token-link: var(--lg-cyan);
+}
+
+.code-block pre {
+  overflow-x: auto;
+  padding: 0.75rem;
+  font-family: var(--font-jetbrains), 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+/* Post bodies. Compact on purpose: headings stay small so a post can't shout over the feed. */
+.markdown {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0.75rem;
+  overflow-wrap: anywhere;
+  line-height: 1.6;
+
+  & :where(h1, h2, h3, h4, h5, h6) {
+    font-family: var(--font-chakra), 'Chakra Petch', system-ui, sans-serif;
+    font-weight: 700;
+    line-height: 1.25;
+  }
+  & :where(h1, h2) {
+    font-size: 1.2rem;
+  }
+  & :where(h3, h4, h5, h6) {
+    font-size: 1.05rem;
+  }
+  & a {
+    color: var(--lg-cyan);
+    text-underline-offset: 2px;
+  }
+  & a:hover {
+    text-decoration: underline;
+  }
+  & :where(ul, ol) {
+    display: grid;
+    gap: 0.25rem;
+    padding-left: 1.25rem;
+  }
+  & ul {
+    list-style: square;
+  }
+  & ol {
+    list-style: decimal;
+  }
+  & blockquote {
+    border-left: 4px solid var(--lg-line);
+    padding-left: 0.75rem;
+    color: var(--lg-ink-2);
+  }
+  & :not(pre) > code {
+    border: 1px solid var(--lg-line);
+    background: var(--lg-sunk);
+    padding: 0 0.3em;
+    font-family: var(--font-jetbrains), 'JetBrains Mono', ui-monospace, monospace;
+    font-size: 0.875em;
+  }
+  & hr {
+    border-color: var(--lg-line);
+  }
+  & table {
+    display: block;
+    overflow-x: auto;
+    border-collapse: collapse;
+    font-size: 0.9rem;
+  }
+  & :where(th, td) {
+    border: 1px solid var(--lg-line);
+    padding: 0.25rem 0.5rem;
+  }
+  & input[type='checkbox'] {
+    margin-right: 0.35rem;
+  }
+}

@@ -26,6 +26,9 @@ See README.md for setup and commands.
   change, reviewed like code. Autogenerate, then read and fix the result.
 - Primary keys will be UUIDv7 so lists page with `where id < :cursor order by id desc`, never
   OFFSET.
+- User-written text is Markdown, rendered on the server by `components/markdown.tsx` (Shiki for
+  code, no raw HTML). The API finds #tags and @mentions (`posts/text.py`) and the web only links
+  the ones it returns; `slugify` in `lib/tags.ts` must stay in step with `tags/schemas.py`.
 - Python: Ruff (lint + format) and mypy strict must pass. TypeScript: ESLint, Prettier and
   strict tsc must pass.
 - API tests run against a real Postgres and Redis, not mocks. `tests/conftest.py` points them at
