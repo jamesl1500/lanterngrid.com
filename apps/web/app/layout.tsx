@@ -36,7 +36,8 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       data-theme="dark"
       className={`${chakra.variable} ${plex.variable} ${jetbrains.variable}`}
     >
-      <body className="min-h-dvh">
+      {/* Pages marked data-fill-screen (chat) take exactly the space left under the header. */}
+      <body className="min-h-dvh has-data-fill-screen:flex has-data-fill-screen:h-dvh has-data-fill-screen:flex-col">
         <Providers>
           <SiteHeader />
           <VerifyBanner />
