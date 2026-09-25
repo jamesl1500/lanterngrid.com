@@ -33,13 +33,15 @@ class Settings(BaseSettings):
     smtp_starttls: bool = False
 
     # S3-compatible storage for uploads: MinIO locally, Cloudflare R2 in production.
-    storage_endpoint_url: str | None = "http://localhost:9000"
+    # 127.0.0.1 rather than localhost: browsers send every localhost cookie (from any port) to
+    # localhost:9000, and MinIO rejects requests whose headers pass 8 KB.
+    storage_endpoint_url: str | None = "http://127.0.0.1:9000"
     storage_region: str = "us-east-1"
     storage_bucket: str = "lanterngrid-media"
     storage_access_key: str = "lanterngrid"
     storage_secret_key: str = "lanterngrid"
     # Where browsers read uploaded files from (a public bucket URL or a CDN domain).
-    storage_public_url: str = "http://localhost:9000/lanterngrid-media"
+    storage_public_url: str = "http://127.0.0.1:9000/lanterngrid-media"
 
     @field_validator("cors_origins", mode="before")
     @classmethod

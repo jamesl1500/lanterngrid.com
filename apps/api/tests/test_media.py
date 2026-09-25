@@ -80,7 +80,7 @@ async def test_attach_replace_and_remove_avatar(
     response = await signed_in.put("/v1/me/images/avatar", json={"key": first})
     assert response.status_code == 200, response.text
     assert response.json() == {
-        "avatar_url": f"http://localhost:9000/lanterngrid-media/{first}",
+        "avatar_url": f"http://127.0.0.1:9000/lanterngrid-media/{first}",
         "banner_url": None,
     }
     assert (await signed_in.get("/v1/auth/me")).json()["avatar_url"].endswith(first)
