@@ -45,9 +45,11 @@ land in Mailpit at http://localhost:8025. To try GitHub sign-in, create a GitHub
 the callback URL `http://localhost:3000/api/v1/auth/github/callback` and put its client id and
 secret in `.env`.
 
-Avatars and banners upload straight from the browser to MinIO (console at
+Avatars, banners and post images upload straight from the browser to MinIO (console at
 http://localhost:9101, user and password `lanterngrid`); `pnpm services:up` creates the
-`lanterngrid-media` bucket.
+`lanterngrid-media` bucket. The app reaches MinIO at `127.0.0.1:9000`, not `localhost:9000`:
+browsers send every `localhost` cookie to any `localhost` port, and MinIO rejects requests
+whose headers add up to more than 8 KB with a `MetadataTooLarge` error.
 
 The system status panel on the home page shows whether the API,
 Postgres and Redis are reachable. The UI kit lives at http://localhost:3000/kit and the API
