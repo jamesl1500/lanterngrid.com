@@ -10,6 +10,8 @@ See README.md for setup and commands.
 - `apps/api` FastAPI. One folder per feature in `app/modules/<feature>/` with `router.py`,
   `schemas.py` (Pydantic), `models.py` (SQLAlchemy) and `service.py` (business logic). Routers
   are mounted under `/v1` in `app/main.py`.
+  Background jobs are Taskiq tasks in `app/worker.py` (`python -m app.worker` runs them and
+  their schedule); keep the work itself in a service function so tests can call it directly.
 - `packages/ui` design tokens (`src/styles.css`) and shared components. TypeScript source,
   compiled by Next via `transpilePackages`.
 - `packages/api-client` generated client. Never edit `openapi.json` or `src/schema.d.ts` by

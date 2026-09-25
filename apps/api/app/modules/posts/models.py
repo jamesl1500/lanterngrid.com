@@ -26,12 +26,14 @@ class Post(Base):
 
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid7)
     author_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
-    # update, snippet or achievement; repo arrives with repo sharing.
+    # update, snippet, repo or achievement.
     kind: Mapped[str] = mapped_column(String(16), default="update", server_default="update")
     # The snippet a snippet post shares.
     snippet_id: Mapped[uuid.UUID | None] = mapped_column(
         ForeignKey("snippets.id", ondelete="SET NULL")
     )
+    # The repo a repo post shares.
+    repo_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("repos.id", ondelete="SET NULL"))
     body_md: Mapped[str] = mapped_column(Text)
     # public or friends.
     visibility: Mapped[str] = mapped_column(String(16), default="public")

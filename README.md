@@ -51,6 +51,11 @@ http://localhost:9101, user and password `lanterngrid`); `pnpm services:up` crea
 browsers send every `localhost` cookie to any `localhost` port, and MinIO rejects requests
 whose headers add up to more than 8 KB with a `MetadataTooLarge` error.
 
+Repo cards read public repos from the GitHub API. Without a token GitHub allows 60 calls an
+hour; set `GITHUB_TOKEN` in `.env` to any personal access token (no scopes needed) for 5,000.
+`pnpm -F @lanterngrid/api worker` runs the background worker, which refreshes repo stars and
+forks every 15 minutes.
+
 The system status panel on the home page shows whether the API,
 Postgres and Redis are reachable. The UI kit lives at http://localhost:3000/kit and the API
 docs at http://localhost:8000/docs.
@@ -77,7 +82,11 @@ New migration: `cd apps/api && uv run alembic revision --autogenerate -m "add us
   `WEB_URL`, `ENVIRONMENT`, the `SMTP_*` and `EMAIL_*` settings, and the GitHub OAuth app's
   `GITHUB_CLIENT_ID` and `GITHUB_CLIENT_SECRET` (callback URL
   `https://<web domain>/api/v1/auth/github/callback`). Use `alembic upgrade head` as the
-  pre-deploy command.
+  pre-deploy command. Set `GITHUB_TOKEN` (a token with no scopes) so repo cards get 5,000
+  GitHub calls an hour.
+- **Worker** is a second Railway service from the same image with the start command
+  `python -m app.worker` and the same variables as the API. Run exactly one replica: it also
+  fires the schedule, and two would run every job twice.
 - **Uploads** go to a Cloudflare R2 bucket. Turn on public access (r2.dev or a custom domain),
   create an R2 API token with object read and write on the bucket, and set the `STORAGE_*`
   variables on the API (see `.env.example`). Browsers upload with presigned PUTs, so the bucket

@@ -6,6 +6,7 @@ import { cache } from 'react'
 
 import { FriendActions } from '@/components/friend-actions'
 import { PostList } from '@/components/post-list'
+import { RepoCard } from '@/components/repo-card'
 import { SnippetCard } from '@/components/snippet-card'
 import { serverApi } from '@/lib/api'
 import { linkKindLabel, shortUrl } from '@/lib/links'
@@ -56,7 +57,7 @@ export default async function ProfilePage({ params, searchParams }: Props) {
       ? { data: undefined }
       : api.GET('/v1/users/{username}/pins', { params: { path }, cache: 'no-store' }),
   ])
-  const pinned = pins?.items.flatMap((pin) => (pin.snippet ? [pin.snippet] : [])) ?? []
+  const pinned = pins?.items ?? []
   const relationship = profile.relationship
   const isMe = relationship?.status === 'self'
   const accent = accentClasses[profile.accent_color as Accent]
@@ -141,6 +142,14 @@ export default async function ProfilePage({ params, searchParams }: Props) {
                 snippets
               </Link>
             </li>
+            <li>
+              <Link
+                href={`/u/${profile.username}/repos` as Route}
+                className="hover:text-ink hover:underline"
+              >
+                repos
+              </Link>
+            </li>
             <li>joined {joined.format(new Date(profile.joined_at))}</li>
           </ul>
           {profile.tags.length > 0 ? (
@@ -180,11 +189,17 @@ export default async function ProfilePage({ params, searchParams }: Props) {
         <section className="grid grid-cols-1 gap-4">
           <h2 className="border-b-2 border-line-strong pb-2 text-xl font-bold">Pinned</h2>
           <ul className="grid grid-cols-1 gap-4 md:grid-cols-2">
-            {pinned.map((snippet) => (
-              <li key={snippet.id} className="grid grid-cols-1">
-                <SnippetCard snippet={snippet} maxLines={8} />
-              </li>
-            ))}
+            {pinned.map((pin) =>
+              pin.snippet ? (
+                <li key={pin.snippet.id} className="grid grid-cols-1">
+                  <SnippetCard snippet={pin.snippet} maxLines={8} />
+                </li>
+              ) : pin.repo ? (
+                <li key={pin.repo.id} className="grid grid-cols-1">
+                  <RepoCard repo={pin.repo} />
+                </li>
+              ) : null,
+            )}
           </ul>
         </section>
       ) : null}

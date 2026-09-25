@@ -38,6 +38,7 @@ from app.modules.posts.schemas import (
     ReactionCount,
     ReactionKind,
 )
+from app.modules.repos import service as repos
 from app.modules.snippets import service as snippets
 from app.modules.social import service as social
 from app.modules.tags import service as tags
@@ -59,8 +60,8 @@ class EmptyPostError(Exception):
     pass
 
 
-class SnippetShareError(Exception):
-    """The snippet isn't yours, or is friends only while the post is public."""
+class ShareError(Exception):
+    """The snippet or repo isn't yours, or the snippet is friends only while the post is public."""
 
 
 def visible_to(viewer_id: uuid.UUID | None) -> ColumnElement[bool]:
@@ -121,6 +122,7 @@ async def _outs(
     comment_counts: dict[uuid.UUID, int] = {}
     achievements: dict[uuid.UUID, AchievementOut] = {}
     shared = await snippets.by_ids(db, viewer_id, [p.snippet_id for p in posts if p.snippet_id])
+    shared_repos = await repos.by_ids(db, [p.repo_id for p in posts if p.repo_id])
     if ids:
         for a in await db.scalars(select(Achievement).where(Achievement.post_id.in_(ids))):
             achievements[a.post_id] = AchievementOut(type=a.type, title=a.title)
@@ -166,6 +168,7 @@ async def _outs(
             mentions=mentions_by_post[p.id],
             images=images_by_post[p.id],
             snippet=snippets.to_out(shared[p.snippet_id]) if p.snippet_id in shared else None,
+            repo=repos.to_out(shared_repos[p.repo_id]) if p.repo_id in shared_repos else None,
             achievement=achievements.get(p.id),
             reactions=reactions[p.id],
             comment_count=comment_counts.get(p.id, 0),
@@ -260,9 +263,9 @@ async def _check_snippet(
     try:
         snippet = await snippets.own(db, author, snippet_id)
     except snippets.SnippetNotFoundError:
-        raise SnippetShareError("You can only share your own snippets.") from None
+        raise ShareError("You can only share your own snippets.") from None
     if snippet.visibility == "friends" and visibility == "public":
-        raise SnippetShareError("That snippet is friends only, so the post has to be too.")
+        raise ShareError("That snippet is friends only, so the post has to be too.")
 
 
 async def _set_achievement(db: AsyncSession, post: Post, achievement: AchievementIn) -> None:
@@ -274,6 +277,12 @@ async def create(db: AsyncSession, storage: Storage, author: User, data: PostCre
     if data.snippet_id is not None:
         await _check_snippet(db, author, data.snippet_id, data.visibility)
         kind = "snippet"
+    elif data.repo_id is not None:
+        try:
+            await repos.own(db, author, data.repo_id)
+        except repos.RepoNotFoundError:
+            raise ShareError("You can only share repos on your profile.") from None
+        kind = "repo"
     elif data.achievement is not None:
         kind = "achievement"
     post = Post(
@@ -282,6 +291,7 @@ async def create(db: AsyncSession, storage: Storage, author: User, data: PostCre
         body_md=data.body_md,
         visibility=data.visibility,
         snippet_id=data.snippet_id,
+        repo_id=data.repo_id,
     )
     db.add(post)
     await db.flush()

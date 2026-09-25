@@ -8,33 +8,16 @@ from app.core.rate_limit import allow
 from app.modules.auth.deps import MemberDep, OptionalUserDep
 from app.modules.snippets import service
 from app.modules.snippets.schemas import (
-    MAX_PINS,
-    PinIn,
-    Pins,
-    PinType,
     SnippetCreate,
     SnippetOut,
     SnippetPage,
     SnippetUpdate,
 )
-from app.modules.social import service as social
-from app.modules.users import service as users
-from app.modules.users.models import User
+from app.modules.users.deps import ProfileOwnerDep
 
 router = APIRouter(tags=["snippets"])
 
 NOT_FOUND = "That snippet doesn't exist or you can't see it."
-
-
-async def _person(db: SessionDep, username: str, viewer: User | None) -> User:
-    person = await users.get_by_username(db, username)
-    if (
-        person is None
-        or person.username is None
-        or (viewer is not None and await social.has_blocked(db, person.id, viewer.id))
-    ):
-        raise HTTPException(status.HTTP_404_NOT_FOUND, "No one here by that name.")
-    return person
 
 
 @router.post("/snippets", operation_id="createSnippet", status_code=status.HTTP_201_CREATED)
@@ -79,34 +62,10 @@ async def delete_snippet(snippet_id: uuid.UUID, user: MemberDep, db: SessionDep)
 
 @router.get("/users/{username}/snippets", operation_id="listUserSnippets")
 async def list_user_snippets(
-    username: str,
+    owner: ProfileOwnerDep,
     viewer: OptionalUserDep,
     db: SessionDep,
     cursor: uuid.UUID | None = None,
     limit: Annotated[int, Query(ge=1, le=50)] = 20,
 ) -> SnippetPage:
-    owner = await _person(db, username, viewer)
     return await service.by_owner(db, viewer, owner, cursor=cursor, limit=limit)
-
-
-@router.get("/users/{username}/pins", operation_id="listPins")
-async def list_pins(username: str, viewer: OptionalUserDep, db: SessionDep) -> Pins:
-    return await service.pins(db, viewer, await _person(db, username, viewer))
-
-
-@router.put("/me/pins/{type}/{item_id}", operation_id="pinItem")
-async def pin_item(type: PinType, item_id: uuid.UUID, user: MemberDep, db: SessionDep) -> Pins:
-    try:
-        return await service.pin(db, user, PinIn(type=type, id=item_id))
-    except service.SnippetNotFoundError:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, NOT_FOUND) from None
-    except service.TooManyPinsError:
-        raise HTTPException(
-            status.HTTP_400_BAD_REQUEST,
-            f"You can pin up to {MAX_PINS} things. Unpin one first.",
-        ) from None
-
-
-@router.delete("/me/pins/{type}/{item_id}", operation_id="unpinItem")
-async def unpin_item(type: PinType, item_id: uuid.UUID, user: MemberDep, db: SessionDep) -> Pins:
-    return await service.unpin(db, user, PinIn(type=type, id=item_id))

@@ -2,8 +2,10 @@
 
 from app.modules.auth.models import EmailToken, OAuthAccount, UserSession
 from app.modules.notifications.models import Notification
+from app.modules.pins.models import Pin
 from app.modules.posts.models import Comment, Mention, Post, PostImage, PostTag, Reaction
-from app.modules.snippets.models import Pin, Snippet
+from app.modules.repos.models import Repo
+from app.modules.snippets.models import Snippet
 from app.modules.social.models import Block, FriendRequest, Friendship
 from app.modules.tags.models import Tag, UserTag
 from app.modules.users.models import Profile, ProfileLink, User
@@ -24,6 +26,7 @@ __all__ = [
     "Profile",
     "ProfileLink",
     "Reaction",
+    "Repo",
     "Snippet",
     "Tag",
     "User",

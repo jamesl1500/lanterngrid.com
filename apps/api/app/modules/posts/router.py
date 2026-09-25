@@ -41,7 +41,7 @@ def _post_errors() -> Iterator[None]:
         raise HTTPException(status.HTTP_404_NOT_FOUND, NOT_FOUND) from None
     except (media.UploadNotFoundError, media.UploadRejectedError):
         raise HTTPException(status.HTTP_400_BAD_REQUEST, BAD_IMAGE) from None
-    except (service.EmptyPostError, service.SnippetShareError) as e:
+    except (service.EmptyPostError, service.ShareError) as e:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, str(e)) from None
 
 
