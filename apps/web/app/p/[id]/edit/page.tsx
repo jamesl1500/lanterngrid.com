@@ -24,7 +24,12 @@ export default async function EditPostPage({ params }: Props) {
       <h1 className="text-3xl font-bold">Edit post</h1>
       <Composer
         me={me}
-        editing={{ id: post.id, body_md: post.body_md, visibility: post.visibility }}
+        editing={{
+          id: post.id,
+          body_md: post.body_md,
+          visibility: post.visibility,
+          images: post.images,
+        }}
       />
     </main>
   )

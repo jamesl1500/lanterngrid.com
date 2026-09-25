@@ -1,5 +1,6 @@
 import logging
 import re
+import uuid
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -10,6 +11,7 @@ from app.modules.media.schemas import (
     MAX_BYTES,
     ImageKind,
     ProfileImages,
+    UploadKind,
     UploadRequest,
     UploadTicket,
 )
@@ -26,9 +28,22 @@ class UploadRejectedError(Exception):
     pass
 
 
-def _key_pattern(kind: ImageKind, user: User) -> re.Pattern[str]:
+def _key_pattern(kind: UploadKind, user_id: uuid.UUID) -> re.Pattern[str]:
     extensions = "|".join(EXTENSIONS.values())
-    return re.compile(rf"{kind}s/{user.id}/[0-9a-f-]{{36}}\.(?:{extensions})")
+    return re.compile(rf"{kind}s/{user_id}/[0-9a-f-]{{36}}\.(?:{extensions})")
+
+
+async def check_upload(storage: Storage, kind: UploadKind, user_id: uuid.UUID, key: str) -> None:
+    """Make sure `key` is this person's upload for `kind` and within limits. A file that breaks
+    the limits is deleted."""
+    if not _key_pattern(kind, user_id).fullmatch(key):
+        raise UploadNotFoundError
+    stored = await storage.head(key)
+    if stored is None:
+        raise UploadNotFoundError
+    if stored.size > MAX_BYTES[kind] or stored.content_type not in EXTENSIONS:
+        await discard(storage, key)
+        raise UploadRejectedError
 
 
 def create_upload(storage: Storage, user: User, data: UploadRequest) -> UploadTicket:
@@ -44,7 +59,7 @@ def images(user: User) -> ProfileImages:
     )
 
 
-async def _discard(storage: Storage, key: str | None) -> None:
+async def discard(storage: Storage, key: str | None) -> None:
     # Best effort: a leftover file costs a little storage, a failed request costs the person.
     if key is None:
         return
@@ -58,21 +73,14 @@ async def attach(
     db: AsyncSession, storage: Storage, user: User, kind: ImageKind, key: str
 ) -> ProfileImages:
     """Point the profile at an uploaded file after checking it is theirs and within limits."""
-    if not _key_pattern(kind, user).fullmatch(key):
-        raise UploadNotFoundError
-    stored = await storage.head(key)
-    if stored is None:
-        raise UploadNotFoundError
-    if stored.size > MAX_BYTES[kind] or stored.content_type not in EXTENSIONS:
-        await _discard(storage, key)
-        raise UploadRejectedError
+    await check_upload(storage, kind, user.id, key)
     field = f"{kind}_key"
     previous: str | None = getattr(user.profile, field)
     if previous == key:
         return images(user)
     setattr(user.profile, field, key)
     await db.commit()
-    await _discard(storage, previous)
+    await discard(storage, previous)
     return images(user)
 
 
@@ -81,5 +89,5 @@ async def remove(db: AsyncSession, storage: Storage, user: User, kind: ImageKind
     previous: str | None = getattr(user.profile, field)
     setattr(user.profile, field, None)
     await db.commit()
-    await _discard(storage, previous)
+    await discard(storage, previous)
     return images(user)

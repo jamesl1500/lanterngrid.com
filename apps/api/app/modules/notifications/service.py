@@ -1,7 +1,7 @@
 import uuid
 from datetime import UTC, datetime
 
-from sqlalchemy import delete, func, select, update
+from sqlalchemy import Select, delete, func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.notifications.models import Notification
@@ -10,6 +10,7 @@ from app.modules.notifications.schemas import (
     NotificationOut,
     NotificationPage,
 )
+from app.modules.posts.models import Comment
 from app.modules.users.summary import summarize
 
 
@@ -25,6 +26,12 @@ def notify(
     db.add(Notification(user_id=user_id, kind=kind, actor_id=actor_id, subject_id=subject_id))
 
 
+def _post_id(n: Notification, comment_posts: dict[uuid.UUID, uuid.UUID]) -> uuid.UUID | None:
+    if n.subject_id is None or n.kind not in ("comment", "mention"):
+        return None
+    return comment_posts.get(n.subject_id, n.subject_id if n.kind == "mention" else None)
+
+
 async def page(
     db: AsyncSession, user_id: uuid.UUID, *, cursor: uuid.UUID | None, limit: int
 ) -> NotificationPage:
@@ -34,6 +41,15 @@ async def page(
     rows = list(await db.scalars(stmt.order_by(Notification.id.desc()).limit(limit + 1)))
     more = len(rows) > limit
     rows = rows[:limit]
+    # Comment and mention subjects may be comments; link those to their post.
+    subjects = [n.subject_id for n in rows if n.kind in ("comment", "mention") and n.subject_id]
+    comment_posts: dict[uuid.UUID, uuid.UUID] = {}
+    if subjects:
+        comment_posts = dict(
+            (await db.execute(select(Comment.id, Comment.post_id).where(Comment.id.in_(subjects))))
+            .tuples()
+            .all()
+        )
     return NotificationPage(
         items=[
             NotificationOut(
@@ -41,6 +57,7 @@ async def page(
                 kind=n.kind,
                 actor=summarize(n.actor),
                 subject_id=n.subject_id,
+                post_id=_post_id(n, comment_posts),
                 created_at=n.created_at,
                 read=n.read_at is not None,
             )
@@ -83,3 +100,7 @@ async def mark_subject_read(db: AsyncSession, user_id: uuid.UUID, subject_id: uu
 async def withdraw(db: AsyncSession, subject_id: uuid.UUID) -> None:
     """Remove notifications about something that no longer applies, like a cancelled request."""
     await db.execute(delete(Notification).where(Notification.subject_id == subject_id))
+
+
+async def withdraw_many(db: AsyncSession, subject_ids: Select[tuple[uuid.UUID]]) -> None:
+    await db.execute(delete(Notification).where(Notification.subject_id.in_(subject_ids)))

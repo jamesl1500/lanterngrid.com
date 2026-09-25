@@ -3,123 +3,103 @@
 import { Alert, Avatar, Button, cn, Select, type Accent } from '@lanterngrid/ui'
 import type { Route } from 'next'
 import { useRouter } from 'next/navigation'
-import { useEffect, useId, useRef, useState, type KeyboardEvent } from 'react'
-import { flushSync } from 'react-dom'
+import { useEffect, useRef, useState, type ChangeEvent } from 'react'
 
 import { browserApi } from '@/lib/api'
-import { activeToken, insertAt, tagText } from '@/lib/composer'
 import { attempt } from '@/lib/errors'
-import { searchPeople } from '@/lib/people'
-import { MAX_POST_LENGTH, type Visibility } from '@/lib/posts'
-import { suggestTags } from '@/lib/tags'
+import { MAX_IMAGES, MAX_POST_LENGTH, type PostImage, type Visibility } from '@/lib/posts'
 import type { Me } from '@/lib/session'
+import { imageProblem, imageTypes, uploadFile } from '@/lib/uploads'
+
+import { AutocompleteTextarea } from './autocomplete-textarea'
 
 import { MarkdownPreview } from './markdown-preview'
-
-type Suggestion = { key: string; label: string; detail: string; insert: string }
 
 type Props = {
   me: Pick<Me, 'display_name' | 'avatar_url' | 'accent_color'>
   /** Set to edit an existing post instead of writing a new one. */
-  editing?: { id: string; body_md: string; visibility: Visibility }
+  editing?: { id: string; body_md: string; visibility: Visibility; images: PostImage[] }
 }
 
-async function suggestionsFor(trigger: '@' | '#', query: string): Promise<Suggestion[]> {
-  if (trigger === '@') {
-    const people = await searchPeople(query)
-    return people.map((p) => ({
-      key: p.id,
-      label: `@${p.username}`,
-      detail: p.display_name,
-      insert: `@${p.username}`,
-    }))
-  }
-  const tags = await suggestTags(query)
-  return tags.map((t) => ({ key: t.slug, label: `#${t.name}`, detail: t.kind, insert: tagText(t) }))
-}
+/** An image in the post. `key` is null while it uploads; `preview` is a blob or public URL. */
+type Attachment = { id: string; preview: string; key: string | null; alt: string }
 
 /** Write or edit a post: Markdown with a preview, and @/# autocomplete. */
 export function Composer({ me, editing }: Props) {
   const router = useRouter()
-  const id = useId()
-  const textarea = useRef<HTMLTextAreaElement>(null)
+  const fileInput = useRef<HTMLInputElement>(null)
   const [body, setBody] = useState(editing?.body_md ?? '')
   const [visibility, setVisibility] = useState<Visibility>(editing?.visibility ?? 'public')
+  const [images, setImages] = useState<Attachment[]>(
+    () => editing?.images.map((i) => ({ id: i.key, preview: i.url, key: i.key, alt: i.alt })) ?? [],
+  )
   const [tab, setTab] = useState<'write' | 'preview'>('write')
-  const [caret, setCaret] = useState(0)
-  const [results, setResults] = useState<{ query: string; items: Suggestion[] } | null>(null)
-  const [active, setActive] = useState(0)
-  const [dismissed, setDismissed] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
+  // Blob URLs for local previews, released when the composer goes away.
+  const blobs = useRef(new Set<string>())
 
-  const token = activeToken(body, caret)
-  const tokenKey = token && token.query ? `${token.trigger}${token.query}` : null
-  const suggestions = tokenKey && results?.query === tokenKey ? results.items : []
-  const showSuggestions = tab === 'write' && suggestions.length > 0 && dismissed !== tokenKey
   const remaining = MAX_POST_LENGTH - body.length
-  const listId = `${id}-suggestions`
+  const uploading = images.some((i) => i.key === null)
+  const empty = !body.trim() && images.length === 0
 
   useEffect(() => {
-    if (!tokenKey) return
-    let cancelled = false
-    const timer = setTimeout(async () => {
-      try {
-        const items = await suggestionsFor(tokenKey[0] as '@' | '#', tokenKey.slice(1))
-        if (!cancelled) setResults({ query: tokenKey, items: items.slice(0, 6) })
-      } catch {
-        // Autocomplete is a nicety; typing still works.
-      }
-    }, 150)
-    return () => {
-      cancelled = true
-      clearTimeout(timer)
-    }
-  }, [tokenKey])
+    const urls = blobs.current
+    return () => urls.forEach((url) => URL.revokeObjectURL(url))
+  }, [])
 
-  function pick(suggestion: Suggestion | undefined) {
-    if (!suggestion || !token) return
-    const next = insertAt(body, token, suggestion.insert)
-    // Commit the new text now so the caret lands before the next keystroke does.
-    flushSync(() => {
-      setBody(next.text)
-      setCaret(next.caret)
-      setActive(0)
-    })
-    textarea.current?.focus()
-    textarea.current?.setSelectionRange(next.caret, next.caret)
+  function release(preview: string) {
+    if (blobs.current.delete(preview)) URL.revokeObjectURL(preview)
   }
 
-  function onKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
-    if ((event.metaKey || event.ctrlKey) && event.key === 'Enter') {
-      event.preventDefault()
-      void submit()
-      return
+  function removeImage(id: string) {
+    const image = images.find((i) => i.id === id)
+    if (image) release(image.preview)
+    setImages((all) => all.filter((i) => i.id !== id))
+  }
+
+  async function attach(file: File) {
+    const id = crypto.randomUUID()
+    const preview = URL.createObjectURL(file)
+    blobs.current.add(preview)
+    setImages((all) => [...all, { id, preview, key: null, alt: '' }])
+    const result = await uploadFile('post', file)
+    if (result.ok) {
+      setImages((all) => all.map((i) => (i.id === id ? { ...i, key: result.key } : i)))
+    } else {
+      release(preview)
+      setImages((all) => all.filter((i) => i.id !== id))
+      setError(result.message)
     }
-    if (!showSuggestions) return
-    if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
-      event.preventDefault()
-      const step = event.key === 'ArrowDown' ? 1 : -1
-      setActive((i) => (i + step + suggestions.length) % suggestions.length)
-    } else if (event.key === 'Enter' || event.key === 'Tab') {
-      event.preventDefault()
-      pick(suggestions[Math.min(active, suggestions.length - 1)])
-    } else if (event.key === 'Escape') {
-      setDismissed(tokenKey)
+  }
+
+  function onPick(event: ChangeEvent<HTMLInputElement>) {
+    const files = [...(event.target.files ?? [])]
+    event.target.value = '' // so picking the same file again still fires
+    setError(null)
+    const room = MAX_IMAGES - images.length
+    if (files.length > room) setError(`A post can have up to ${MAX_IMAGES} images.`)
+    for (const file of files.slice(0, Math.max(room, 0))) {
+      const problem = imageProblem('post', file)
+      if (problem) setError(problem)
+      else void attach(file)
     }
   }
 
   async function submit() {
-    if (!body.trim() || remaining < 0 || busy) return
+    if (empty || uploading || remaining < 0 || busy) return
     setBusy(true)
     setError(null)
+    const attached = images.flatMap((i) => (i.key ? [{ key: i.key, alt: i.alt }] : []))
     const result = await attempt(() =>
       editing
         ? browserApi.PATCH('/v1/posts/{post_id}', {
             params: { path: { post_id: editing.id } },
-            body: { body_md: body, visibility },
+            body: { body_md: body, visibility, images: attached },
           })
-        : browserApi.POST('/v1/posts', { body: { body_md: body, visibility } }),
+        : browserApi.POST('/v1/posts', {
+            body: { body_md: body, visibility, images: attached },
+          }),
     )
     setBusy(false)
     if (!result.ok) {
@@ -130,6 +110,8 @@ export function Composer({ me, editing }: Props) {
       router.push(`/p/${editing.id}` as Route)
     } else {
       setBody('')
+      images.forEach((i) => release(i.preview))
+      setImages([])
       setTab('write')
     }
     router.refresh()
@@ -177,60 +159,16 @@ export function Composer({ me, editing }: Props) {
 
       <div className="relative">
         {tab === 'write' ? (
-          <>
-            <label htmlFor={id} className="sr-only">
-              {editing ? 'Edit your post' : 'Write a post'}
-            </label>
-            <textarea
-              id={id}
-              ref={textarea}
-              value={body}
-              rows={editing ? 8 : 4}
-              placeholder="What did you ship, break or learn? Markdown works, ```lang for code, #tags and @people too."
-              role="combobox"
-              aria-expanded={showSuggestions}
-              aria-controls={listId}
-              aria-autocomplete="list"
-              aria-activedescendant={showSuggestions ? `${listId}-${active}` : undefined}
-              onChange={(e) => {
-                setBody(e.target.value)
-                setCaret(e.target.selectionStart)
-                setActive(0)
-                setDismissed(null)
-              }}
-              onSelect={(e) => setCaret(e.currentTarget.selectionStart)}
-              onKeyDown={onKeyDown}
-              onBlur={() => setDismissed(tokenKey)}
-              className="block min-h-28 w-full resize-y bg-transparent px-4 py-3 text-ink placeholder:text-ink-3 focus:outline-none"
-            />
-            <ul
-              id={listId}
-              role="listbox"
-              hidden={!showSuggestions}
-              className="absolute inset-x-4 top-full z-20 -mt-2 border-2 border-line-strong bg-surface shadow-hard"
-            >
-              {suggestions.map((s, index) => (
-                <li
-                  key={s.key}
-                  id={`${listId}-${index}`}
-                  role="option"
-                  aria-selected={index === active}
-                  onMouseDown={(e) => {
-                    e.preventDefault()
-                    pick(s)
-                  }}
-                  onMouseEnter={() => setActive(index)}
-                  className={cn(
-                    'flex cursor-pointer justify-between gap-3 px-3 py-1.5 font-mono text-sm',
-                    index === active ? 'bg-cyan-soft text-cyan' : 'text-ink-2',
-                  )}
-                >
-                  <span>{s.label}</span>
-                  <span className="truncate text-xs text-ink-3">{s.detail}</span>
-                </li>
-              ))}
-            </ul>
-          </>
+          <AutocompleteTextarea
+            label={editing ? 'Edit your post' : 'Write a post'}
+            value={body}
+            onChange={setBody}
+            onSubmit={() => void submit()}
+            triggers={['@', '#']}
+            rows={editing ? 8 : 4}
+            placeholder="What did you ship, break or learn? Markdown works, ```lang for code, #tags and @people too."
+            className="min-h-28"
+          />
         ) : (
           <div className="min-h-28 px-4 py-3">
             {body.trim() ? (
@@ -242,6 +180,48 @@ export function Composer({ me, editing }: Props) {
         )}
       </div>
 
+      {images.length > 0 ? (
+        <ul aria-label="Images" className="grid grid-cols-2 gap-3 px-4 pb-3 sm:grid-cols-4">
+          {images.map((image, index) => (
+            <li key={image.id} className="grid content-start gap-1.5">
+              <div className="relative aspect-square border-2 border-line-strong bg-sunk">
+                {/* eslint-disable-next-line @next/next/no-img-element -- local blob previews */}
+                <img
+                  src={image.preview}
+                  alt=""
+                  className={cn('size-full object-cover', image.key === null && 'opacity-50')}
+                />
+                {image.key === null ? (
+                  <span className="absolute inset-x-0 bottom-0 bg-surface/90 px-2 py-1 font-mono text-xs text-ink-2">
+                    uploading…
+                  </span>
+                ) : null}
+                <button
+                  type="button"
+                  aria-label={`Remove image ${index + 1}`}
+                  onClick={() => removeImage(image.id)}
+                  className="absolute top-1 right-1 grid size-7 place-items-center border-2 border-line-strong bg-surface font-mono text-sm hover:bg-coral hover:text-ground"
+                >
+                  ×
+                </button>
+              </div>
+              <input
+                aria-label={`Describe image ${index + 1}`}
+                placeholder="Describe it (alt text)"
+                maxLength={300}
+                value={image.alt}
+                onChange={(e) =>
+                  setImages((all) =>
+                    all.map((i) => (i.id === image.id ? { ...i, alt: e.target.value } : i)),
+                  )
+                }
+                className="w-full border border-line bg-sunk px-2 py-1 text-xs placeholder:text-ink-3 focus:border-line-strong focus:outline-none"
+              />
+            </li>
+          ))}
+        </ul>
+      ) : null}
+
       {error ? (
         <Alert tone="error" className="mx-4 mb-3">
           {error}
@@ -249,22 +229,43 @@ export function Composer({ me, editing }: Props) {
       ) : null}
 
       <div className="flex flex-wrap items-center gap-3 border-t border-line px-4 py-2.5">
+        <input
+          ref={fileInput}
+          type="file"
+          accept={imageTypes.join(',')}
+          multiple
+          hidden
+          onChange={onPick}
+        />
+        <Button
+          type="button"
+          variant="secondary"
+          size="sm"
+          disabled={images.length >= MAX_IMAGES}
+          onClick={() => fileInput.current?.click()}
+          aria-label="Add image"
+        >
+          <span aria-hidden className="sm:hidden">
+            Image
+          </span>
+          <span aria-hidden className="hidden sm:inline">
+            Add image
+          </span>
+        </Button>
         <Select
           aria-label="Who can see this"
           value={visibility}
           onChange={(e) => setVisibility(e.target.value as Visibility)}
-          className="w-40 [&_select]:h-8 [&_select]:text-sm"
+          className="w-36 sm:w-40 [&_select]:h-8 [&_select]:text-sm"
         >
           <option value="public">Everyone</option>
           <option value="friends">Friends only</option>
         </Select>
+        {/* Only near the limit, so the toolbar fits on a phone. */}
         <span
-          className={cn(
-            'ml-auto font-mono text-xs',
-            remaining < 0 ? 'text-coral' : remaining < 200 ? 'text-amber' : 'text-ink-3',
-          )}
+          className={cn('ml-auto font-mono text-xs', remaining < 0 ? 'text-coral' : 'text-amber')}
         >
-          {remaining}
+          {remaining < 200 ? remaining : null}
         </span>
         {editing ? (
           <Button
@@ -280,7 +281,7 @@ export function Composer({ me, editing }: Props) {
           type="button"
           size="sm"
           variant="accent"
-          disabled={busy || !body.trim() || remaining < 0}
+          disabled={busy || empty || uploading || remaining < 0}
           onClick={() => void submit()}
         >
           {busy ? 'Posting…' : editing ? 'Save' : 'Post'}

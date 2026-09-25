@@ -28,6 +28,94 @@
         "title": "AuthProviders",
         "type": "object"
       },
+      "CommentCreate": {
+        "properties": {
+          "body_md": {
+            "maxLength": 2000,
+            "minLength": 1,
+            "title": "Body Md",
+            "type": "string"
+          }
+        },
+        "required": [
+          "body_md"
+        ],
+        "title": "CommentCreate",
+        "type": "object"
+      },
+      "CommentOut": {
+        "properties": {
+          "author": {
+            "$ref": "#/components/schemas/UserSummary"
+          },
+          "body_md": {
+            "title": "Body Md",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "mentions": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Mentions",
+            "type": "array"
+          },
+          "post_id": {
+            "format": "uuid",
+            "title": "Post Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "post_id",
+          "author",
+          "body_md",
+          "mentions",
+          "created_at"
+        ],
+        "title": "CommentOut",
+        "type": "object"
+      },
+      "CommentPage": {
+        "description": "Oldest first. Pass `next_cursor` as `cursor` for the next (newer) page.",
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/CommentOut"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          }
+        },
+        "required": [
+          "items",
+          "next_cursor"
+        ],
+        "title": "CommentPage",
+        "type": "object"
+      },
       "FriendRequestCreate": {
         "properties": {
           "username": {
@@ -328,10 +416,23 @@
             "enum": [
               "friend_request",
               "friend_accepted",
-              "mention"
+              "mention",
+              "comment"
             ],
             "title": "Kind",
             "type": "string"
+          },
+          "post_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Post Id"
           },
           "read": {
             "title": "Read",
@@ -355,6 +456,7 @@
           "kind",
           "actor",
           "subject_id",
+          "post_id",
           "created_at",
           "read"
         ],
@@ -467,10 +569,19 @@
       "PostCreate": {
         "properties": {
           "body_md": {
+            "default": "",
             "maxLength": 5000,
-            "minLength": 1,
             "title": "Body Md",
             "type": "string"
+          },
+          "images": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/PostImageIn"
+            },
+            "maxItems": 4,
+            "title": "Images",
+            "type": "array"
           },
           "visibility": {
             "default": "public",
@@ -482,10 +593,51 @@
             "type": "string"
           }
         },
-        "required": [
-          "body_md"
-        ],
         "title": "PostCreate",
+        "type": "object"
+      },
+      "PostImageIn": {
+        "description": "An image uploaded with kind `post`.",
+        "properties": {
+          "alt": {
+            "default": "",
+            "maxLength": 300,
+            "title": "Alt",
+            "type": "string"
+          },
+          "key": {
+            "maxLength": 300,
+            "title": "Key",
+            "type": "string"
+          }
+        },
+        "required": [
+          "key"
+        ],
+        "title": "PostImageIn",
+        "type": "object"
+      },
+      "PostImageOut": {
+        "properties": {
+          "alt": {
+            "title": "Alt",
+            "type": "string"
+          },
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "url": {
+            "title": "Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "key",
+          "url",
+          "alt"
+        ],
+        "title": "PostImageOut",
         "type": "object"
       },
       "PostOut": {
@@ -496,6 +648,10 @@
           "body_md": {
             "title": "Body Md",
             "type": "string"
+          },
+          "comment_count": {
+            "title": "Comment Count",
+            "type": "integer"
           },
           "created_at": {
             "format": "date-time",
@@ -519,6 +675,13 @@
             "title": "Id",
             "type": "string"
           },
+          "images": {
+            "items": {
+              "$ref": "#/components/schemas/PostImageOut"
+            },
+            "title": "Images",
+            "type": "array"
+          },
           "kind": {
             "const": "update",
             "title": "Kind",
@@ -529,6 +692,13 @@
               "type": "string"
             },
             "title": "Mentions",
+            "type": "array"
+          },
+          "reactions": {
+            "items": {
+              "$ref": "#/components/schemas/ReactionCount"
+            },
+            "title": "Reactions",
             "type": "array"
           },
           "tags": {
@@ -555,6 +725,9 @@
           "visibility",
           "tags",
           "mentions",
+          "images",
+          "reactions",
+          "comment_count",
           "created_at",
           "edited_at"
         ],
@@ -590,14 +763,29 @@
         "title": "PostPage",
         "type": "object"
       },
+      "PostReactions": {
+        "properties": {
+          "reactions": {
+            "items": {
+              "$ref": "#/components/schemas/ReactionCount"
+            },
+            "title": "Reactions",
+            "type": "array"
+          }
+        },
+        "required": [
+          "reactions"
+        ],
+        "title": "PostReactions",
+        "type": "object"
+      },
       "PostUpdate": {
-        "description": "Fields left out are unchanged.",
+        "description": "Fields left out are unchanged. `images` replaces the post's images.",
         "properties": {
           "body_md": {
             "anyOf": [
               {
                 "maxLength": 5000,
-                "minLength": 1,
                 "type": "string"
               },
               {
@@ -605,6 +793,21 @@
               }
             ],
             "title": "Body Md"
+          },
+          "images": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/PostImageIn"
+                },
+                "maxItems": 4,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Images"
           },
           "visibility": {
             "anyOf": [
@@ -1061,6 +1264,37 @@
         "title": "PublicProfile",
         "type": "object"
       },
+      "ReactionCount": {
+        "properties": {
+          "count": {
+            "title": "Count",
+            "type": "integer"
+          },
+          "kind": {
+            "enum": [
+              "like",
+              "ship",
+              "love",
+              "idea",
+              "laugh",
+              "eyes"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "mine": {
+            "title": "Mine",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "kind",
+          "count",
+          "mine"
+        ],
+        "title": "ReactionCount",
+        "type": "object"
+      },
       "Relationship": {
         "description": "How the signed-in person relates to someone. `request_id` is set while a request is open.",
         "properties": {
@@ -1217,7 +1451,8 @@
           "kind": {
             "enum": [
               "avatar",
-              "banner"
+              "banner",
+              "post"
             ],
             "title": "Kind",
             "type": "string"
@@ -1731,6 +1966,42 @@
         "summary": "Resend Verification",
         "tags": [
           "auth"
+        ]
+      }
+    },
+    "/v1/comments/{comment_id}": {
+      "delete": {
+        "operationId": "deleteComment",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "comment_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Comment Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Delete Comment",
+        "tags": [
+          "posts"
         ]
       }
     },
@@ -2933,6 +3204,247 @@
           }
         },
         "summary": "Update Post",
+        "tags": [
+          "posts"
+        ]
+      }
+    },
+    "/v1/posts/{post_id}/comments": {
+      "get": {
+        "operationId": "listComments",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "post_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Post Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommentPage"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Comments",
+        "tags": [
+          "posts"
+        ]
+      },
+      "post": {
+        "operationId": "createComment",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "post_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Post Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CommentCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommentOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Comment",
+        "tags": [
+          "posts"
+        ]
+      }
+    },
+    "/v1/posts/{post_id}/reactions/{kind}": {
+      "delete": {
+        "operationId": "removeReaction",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "post_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Post Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "kind",
+            "required": true,
+            "schema": {
+              "enum": [
+                "like",
+                "ship",
+                "love",
+                "idea",
+                "laugh",
+                "eyes"
+              ],
+              "title": "Kind",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PostReactions"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Remove Reaction",
+        "tags": [
+          "posts"
+        ]
+      },
+      "put": {
+        "operationId": "addReaction",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "post_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Post Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "kind",
+            "required": true,
+            "schema": {
+              "enum": [
+                "like",
+                "ship",
+                "love",
+                "idea",
+                "laugh",
+                "eyes"
+              ],
+              "title": "Kind",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PostReactions"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Add Reaction",
         "tags": [
           "posts"
         ]

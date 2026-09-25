@@ -12,6 +12,11 @@ export const metadata: Metadata = { title: 'Notifications' }
 
 type Note = Schemas['NotificationOut']
 
+function postHref(postId: string | null, commentId?: string | null): Route {
+  if (!postId) return '/'
+  return `/p/${postId}${commentId ? `#comment-${commentId}` : ''}` as Route
+}
+
 function describe(note: Note): { text: string; href: Route } {
   switch (note.kind) {
     case 'friend_request':
@@ -22,10 +27,12 @@ function describe(note: Note): { text: string; href: Route } {
         href: `/u/${note.actor.username}` as Route,
       }
     case 'mention':
-      return {
-        text: 'mentioned you in a post.',
-        href: (note.subject_id ? `/p/${note.subject_id}` : '/') as Route,
-      }
+      // The subject is the post, or a comment on it.
+      return note.subject_id === note.post_id
+        ? { text: 'mentioned you in a post.', href: postHref(note.post_id) }
+        : { text: 'mentioned you in a comment.', href: postHref(note.post_id, note.subject_id) }
+    case 'comment':
+      return { text: 'commented on your post.', href: postHref(note.post_id, note.subject_id) }
   }
 }
 
@@ -50,7 +57,9 @@ export default async function NotificationsPage({
       {data.items.length === 0 ? (
         <Card className="grid place-items-center gap-2 px-6 py-12 text-center">
           <span className="label">all quiet</span>
-          <p className="max-w-[40ch] text-ink-2">Friend requests and mentions will show up here.</p>
+          <p className="max-w-[40ch] text-ink-2">
+            Friend requests, comments and mentions will show up here.
+          </p>
         </Card>
       ) : (
         <Card>

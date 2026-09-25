@@ -1,4 +1,5 @@
 import re
+from typing import Any
 
 from httpx import AsyncClient, Response
 
@@ -44,3 +45,14 @@ async def member(client: AsyncClient, username: str, display_name: str | None = 
     )
     assert response.status_code == 200, response.text
     return username
+
+
+async def befriend(a: AsyncClient, b: AsyncClient, b_username: str) -> None:
+    sent = (await a.post("/v1/friend-requests", json={"username": b_username})).json()
+    assert (await b.post(f"/v1/friend-requests/{sent['id']}/accept")).status_code == 200
+
+
+async def post(client: AsyncClient, body: str, visibility: str = "public") -> dict[str, Any]:
+    response = await client.post("/v1/posts", json={"body_md": body, "visibility": visibility})
+    assert response.status_code == 201, response.text
+    return dict(response.json())

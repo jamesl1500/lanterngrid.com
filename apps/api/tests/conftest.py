@@ -69,6 +69,7 @@ from app.core.redis import redis  # noqa: E402
 from app.core.storage import get_storage  # noqa: E402
 from app.main import app  # noqa: E402
 from tests.fakes import FakeStorage  # noqa: E402
+from tests.helpers import member  # noqa: E402
 
 # Seeded by migrations; tests remove only the rows they add.
 KEEP_TABLES = frozenset({"tags"})
@@ -104,6 +105,28 @@ async def new_client() -> AsyncIterator[Callable[[], AsyncClient]]:
     yield make
     for c in clients:
         await c.aclose()
+
+
+# Three members, each on their own client. Usernames are ada, ben and cyd.
+@pytest.fixture
+async def ada(new_client: Callable[[], AsyncClient]) -> AsyncClient:
+    c = new_client()
+    await member(c, "ada", "Ada Park")
+    return c
+
+
+@pytest.fixture
+async def ben(new_client: Callable[[], AsyncClient]) -> AsyncClient:
+    c = new_client()
+    await member(c, "ben", "Ben Okafor")
+    return c
+
+
+@pytest.fixture
+async def cy(new_client: Callable[[], AsyncClient]) -> AsyncClient:
+    c = new_client()
+    await member(c, "cyd", "Cy Doe")
+    return c
 
 
 @pytest.fixture(autouse=True)
