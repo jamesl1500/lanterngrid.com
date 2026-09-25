@@ -4,11 +4,12 @@ from typing import Annotated, Literal, Self
 
 from pydantic import BaseModel, BeforeValidator, Field, model_validator
 
+from app.modules.repos.schemas import RepoOut
 from app.modules.snippets.schemas import SnippetOut
 from app.modules.tags.schemas import TagOut
 from app.modules.users.schemas import UserSummary
 
-PostKind = Literal["update", "snippet", "achievement"]
+PostKind = Literal["update", "snippet", "repo", "achievement"]
 AchievementType = Literal[
     "shipped", "launched", "promoted", "new_job", "certified", "first_oss_merge", "milestone"
 ]
@@ -33,7 +34,7 @@ CommentBody = Annotated[
     str, BeforeValidator(_trim), Field(min_length=1, max_length=MAX_COMMENT_LENGTH)
 ]
 EMPTY_POST = "Write something or add an image."
-ONE_ATTACHMENT = "A post can share a snippet or an achievement, not both."
+ONE_ATTACHMENT = "A post can share one snippet, repo or achievement."
 
 
 class PostImageIn(BaseModel):
@@ -57,15 +58,17 @@ class PostCreate(BaseModel):
     body_md: Body = ""
     visibility: Visibility = "public"
     images: list[PostImageIn] = Field(default=[], max_length=MAX_IMAGES)
-    # Share one of your snippets (a snippet post) or celebrate something (an achievement post).
+    # Share one of your snippets or repos, or celebrate something (an achievement post).
     snippet_id: uuid.UUID | None = None
+    repo_id: uuid.UUID | None = None
     achievement: AchievementIn | None = None
 
     @model_validator(mode="after")
     def _check(self) -> Self:
-        if self.snippet_id and self.achievement:
+        attached = [a for a in (self.snippet_id, self.repo_id, self.achievement) if a is not None]
+        if len(attached) > 1:
             raise ValueError(ONE_ATTACHMENT)
-        if not (self.body_md or self.images or self.snippet_id or self.achievement):
+        if not (self.body_md or self.images or attached):
             raise ValueError(EMPTY_POST)
         return self
 
@@ -109,6 +112,8 @@ class PostOut(BaseModel):
     images: list[PostImageOut]
     # The shared snippet, when the viewer can see it (null if it was deleted or hidden).
     snippet: SnippetOut | None
+    # The shared repo (null if its owner removed it).
+    repo: RepoOut | None
     achievement: AchievementOut | None
     # Only kinds someone used, in REACTION_KINDS order.
     reactions: list[ReactionCount]

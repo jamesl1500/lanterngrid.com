@@ -641,6 +641,41 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/repos": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Add Repo */
+        post: operations["addRepo"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/repos/{repo_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Repo */
+        get: operations["getRepo"];
+        put?: never;
+        post?: never;
+        /** Delete Repo */
+        delete: operations["deleteRepo"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/snippets": {
         parameters: {
             query?: never;
@@ -805,6 +840,23 @@ export interface paths {
         };
         /** List User Posts */
         get: operations["listUserPosts"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/users/{username}/repos": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List User Repos */
+        get: operations["listUserRepos"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1078,12 +1130,13 @@ export interface components {
         };
         /** PinOut */
         PinOut: {
+            repo?: components["schemas"]["RepoOut"] | null;
             snippet?: components["schemas"]["SnippetOut"] | null;
             /**
              * Type
-             * @constant
+             * @enum {string}
              */
-            type: "snippet";
+            type: "snippet" | "repo";
         };
         /**
          * Pins
@@ -1106,6 +1159,8 @@ export interface components {
              * @default []
              */
             images: components["schemas"]["PostImageIn"][];
+            /** Repo Id */
+            repo_id?: string | null;
             /** Snippet Id */
             snippet_id?: string | null;
             /**
@@ -1163,11 +1218,12 @@ export interface components {
              * Kind
              * @enum {string}
              */
-            kind: "update" | "snippet" | "achievement";
+            kind: "update" | "snippet" | "repo" | "achievement";
             /** Mentions */
             mentions: string[];
             /** Reactions */
             reactions: components["schemas"]["ReactionCount"][];
+            repo: components["schemas"]["RepoOut"] | null;
             snippet: components["schemas"]["SnippetOut"] | null;
             /** Tags */
             tags: components["schemas"]["TagOut"][];
@@ -1333,6 +1389,63 @@ export interface components {
              * @enum {string}
              */
             status: "self" | "none" | "friends" | "request_sent" | "request_received" | "blocked";
+        };
+        /** RepoAdd */
+        RepoAdd: {
+            /** Repo */
+            repo: string;
+        };
+        /** RepoOut */
+        RepoOut: {
+            /** Archived */
+            archived: boolean;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Description */
+            description: string | null;
+            /**
+             * Fetched At
+             * Format: date-time
+             */
+            fetched_at: string;
+            /** Fork */
+            fork: boolean;
+            /** Forks */
+            forks: number;
+            /** Full Name */
+            full_name: string;
+            /** Homepage */
+            homepage: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Language */
+            language: string | null;
+            /** Missing */
+            missing: boolean;
+            /** Open Issues */
+            open_issues: number;
+            owner: components["schemas"]["UserSummary"];
+            /** Pushed At */
+            pushed_at: string | null;
+            /** Stars */
+            stars: number;
+            /** Topics */
+            topics: string[];
+            /** Url */
+            url: string;
+        };
+        /** RepoPage */
+        RepoPage: {
+            /** Items */
+            items: components["schemas"]["RepoOut"][];
+            /** Next Cursor */
+            next_cursor: string | null;
         };
         /** SignInRequest */
         SignInRequest: {
@@ -2424,7 +2537,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                type: "snippet";
+                type: "snippet" | "repo";
                 item_id: string;
             };
             cookie?: never;
@@ -2456,7 +2569,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                type: "snippet";
+                type: "snippet" | "repo";
                 item_id: string;
             };
             cookie?: never;
@@ -2895,6 +3008,99 @@ export interface operations {
             };
         };
     };
+    addRepo: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RepoAdd"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RepoOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    getRepo: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                repo_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RepoOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    deleteRepo: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                repo_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     createSnippet: {
         parameters: {
             query?: never;
@@ -3268,6 +3474,40 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PostPage"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    listUserRepos: {
+        parameters: {
+            query?: {
+                cursor?: string | null;
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                username: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RepoPage"];
                 };
             };
             /** @description Validation Error */

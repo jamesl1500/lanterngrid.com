@@ -25,7 +25,7 @@ import { AutocompleteTextarea } from './autocomplete-textarea'
 import { MarkdownPreview } from './markdown-preview'
 
 type Props = {
-  me: Pick<Me, 'display_name' | 'avatar_url' | 'accent_color'>
+  me: Pick<Me, 'username' | 'display_name' | 'avatar_url' | 'accent_color'>
   /** Set to edit an existing post instead of writing a new one. */
   editing?: {
     id: string
@@ -212,6 +212,18 @@ export function Composer({ me, editing }: Props) {
                 <span className="hidden sm:inline"> snippet</span>
               </span>
             </Link>
+            {me.username ? (
+              <Link
+                href={`/u/${me.username}/repos` as Route}
+                aria-label="Add a repo"
+                title="Show off a GitHub repo"
+                className={headerLink}
+              >
+                <span aria-hidden>
+                  ⑂<span className="hidden sm:inline"> repo</span>
+                </span>
+              </Link>
+            ) : null}
           </div>
         )}
       </div>

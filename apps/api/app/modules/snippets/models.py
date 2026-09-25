@@ -38,17 +38,3 @@ class Snippet(Base):
     deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
     owner: Mapped[User] = relationship(lazy="joined")
-
-
-class Pin(Base):
-    """Something someone pinned to their profile."""
-
-    __tablename__ = "pins"
-
-    user_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("users.id", ondelete="CASCADE"), primary_key=True
-    )
-    # snippet now; repo arrives with repo sharing.
-    item_type: Mapped[str] = mapped_column(String(16), primary_key=True)
-    item_id: Mapped[uuid.UUID] = mapped_column(primary_key=True)
-    position: Mapped[int] = mapped_column()

@@ -9,12 +9,14 @@ import { Markdown } from './markdown'
 import { PostImages } from './post-images'
 import { PostMenu } from './post-menu'
 import { ReactionBar } from './reaction-bar'
+import { RepoCard } from './repo-card'
 import { SnippetCard } from './snippet-card'
 
 // The left edge takes the post kind's accent (full class names so Tailwind can see them).
 const kindEdge: Record<Post['kind'], string> = {
   update: 'border-l-cyan',
   snippet: 'border-l-violet',
+  repo: 'border-l-lime',
   achievement: 'border-l-amber',
 }
 
@@ -95,6 +97,17 @@ export function PostCard({ post, viewerId, afterDelete }: Props) {
             ) : (
               <p className="border border-dashed border-line px-4 py-3 text-sm text-ink-3">
                 This snippet was deleted or isn&apos;t shared with you.
+              </p>
+            )}
+          </div>
+        ) : null}
+        {post.kind === 'repo' ? (
+          <div className={cn('px-4 pb-3', !post.body_md && 'pt-3')}>
+            {post.repo ? (
+              <RepoCard repo={post.repo} />
+            ) : (
+              <p className="border border-dashed border-line px-4 py-3 text-sm text-ink-3">
+                This repo was removed from Lantern Grid.
               </p>
             )}
           </div>

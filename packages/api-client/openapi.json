@@ -624,6 +624,16 @@
       },
       "PinOut": {
         "properties": {
+          "repo": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RepoOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "snippet": {
             "anyOf": [
               {
@@ -635,7 +645,10 @@
             ]
           },
           "type": {
-            "const": "snippet",
+            "enum": [
+              "snippet",
+              "repo"
+            ],
             "title": "Type",
             "type": "string"
           }
@@ -689,6 +702,18 @@
             "maxItems": 4,
             "title": "Images",
             "type": "array"
+          },
+          "repo_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Repo Id"
           },
           "snippet_id": {
             "anyOf": [
@@ -815,6 +840,7 @@
             "enum": [
               "update",
               "snippet",
+              "repo",
               "achievement"
             ],
             "title": "Kind",
@@ -833,6 +859,16 @@
             },
             "title": "Reactions",
             "type": "array"
+          },
+          "repo": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RepoOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "snippet": {
             "anyOf": [
@@ -870,6 +906,7 @@
           "mentions",
           "images",
           "snippet",
+          "repo",
           "achievement",
           "reactions",
           "comment_count",
@@ -1482,6 +1519,177 @@
           "status"
         ],
         "title": "Relationship",
+        "type": "object"
+      },
+      "RepoAdd": {
+        "properties": {
+          "repo": {
+            "maxLength": 300,
+            "minLength": 3,
+            "title": "Repo",
+            "type": "string"
+          }
+        },
+        "required": [
+          "repo"
+        ],
+        "title": "RepoAdd",
+        "type": "object"
+      },
+      "RepoOut": {
+        "properties": {
+          "archived": {
+            "title": "Archived",
+            "type": "boolean"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "fetched_at": {
+            "format": "date-time",
+            "title": "Fetched At",
+            "type": "string"
+          },
+          "fork": {
+            "title": "Fork",
+            "type": "boolean"
+          },
+          "forks": {
+            "title": "Forks",
+            "type": "integer"
+          },
+          "full_name": {
+            "title": "Full Name",
+            "type": "string"
+          },
+          "homepage": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Homepage"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "language": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Language"
+          },
+          "missing": {
+            "title": "Missing",
+            "type": "boolean"
+          },
+          "open_issues": {
+            "title": "Open Issues",
+            "type": "integer"
+          },
+          "owner": {
+            "$ref": "#/components/schemas/UserSummary"
+          },
+          "pushed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pushed At"
+          },
+          "stars": {
+            "title": "Stars",
+            "type": "integer"
+          },
+          "topics": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Topics",
+            "type": "array"
+          },
+          "url": {
+            "title": "Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "owner",
+          "full_name",
+          "url",
+          "description",
+          "homepage",
+          "language",
+          "stars",
+          "forks",
+          "open_issues",
+          "topics",
+          "fork",
+          "archived",
+          "pushed_at",
+          "fetched_at",
+          "missing",
+          "created_at"
+        ],
+        "title": "RepoOut",
+        "type": "object"
+      },
+      "RepoPage": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/RepoOut"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          }
+        },
+        "required": [
+          "items",
+          "next_cursor"
+        ],
+        "title": "RepoPage",
         "type": "object"
       },
       "SignInRequest": {
@@ -3386,7 +3594,10 @@
             "name": "type",
             "required": true,
             "schema": {
-              "const": "snippet",
+              "enum": [
+                "snippet",
+                "repo"
+              ],
               "title": "Type",
               "type": "string"
             }
@@ -3426,7 +3637,7 @@
         },
         "summary": "Unpin Item",
         "tags": [
-          "snippets"
+          "pins"
         ]
       },
       "put": {
@@ -3437,7 +3648,10 @@
             "name": "type",
             "required": true,
             "schema": {
-              "const": "snippet",
+              "enum": [
+                "snippet",
+                "repo"
+              ],
               "title": "Type",
               "type": "string"
             }
@@ -3477,7 +3691,7 @@
         },
         "summary": "Pin Item",
         "tags": [
-          "snippets"
+          "pins"
         ]
       }
     },
@@ -4097,6 +4311,124 @@
         ]
       }
     },
+    "/v1/repos": {
+      "post": {
+        "operationId": "addRepo",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RepoAdd"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RepoOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Add Repo",
+        "tags": [
+          "repos"
+        ]
+      }
+    },
+    "/v1/repos/{repo_id}": {
+      "delete": {
+        "operationId": "deleteRepo",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "repo_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Repo Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Delete Repo",
+        "tags": [
+          "repos"
+        ]
+      },
+      "get": {
+        "operationId": "getRepo",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "repo_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Repo Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RepoOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Repo",
+        "tags": [
+          "repos"
+        ]
+      }
+    },
     "/v1/snippets": {
       "post": {
         "operationId": "createSnippet",
@@ -4632,7 +4964,7 @@
         },
         "summary": "List Pins",
         "tags": [
-          "snippets"
+          "pins"
         ]
       }
     },
@@ -4704,6 +5036,77 @@
         "summary": "List User Posts",
         "tags": [
           "posts"
+        ]
+      }
+    },
+    "/v1/users/{username}/repos": {
+      "get": {
+        "operationId": "listUserRepos",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "username",
+            "required": true,
+            "schema": {
+              "title": "Username",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "maximum": 50,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RepoPage"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List User Repos",
+        "tags": [
+          "repos"
         ]
       }
     },

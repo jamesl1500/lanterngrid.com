@@ -2,15 +2,12 @@ import uuid
 from collections.abc import Sequence
 from datetime import UTC, datetime
 
-from sqlalchemy import ColumnElement, Select, and_, delete, func, select
+from sqlalchemy import ColumnElement, Select, and_, delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.modules.snippets.models import Pin, Snippet
+from app.modules.pins.models import Pin
+from app.modules.snippets.models import Snippet
 from app.modules.snippets.schemas import (
-    MAX_PINS,
-    PinIn,
-    PinOut,
-    Pins,
     SnippetCreate,
     SnippetOut,
     SnippetPage,
@@ -22,10 +19,6 @@ from app.modules.users.summary import summarize
 
 
 class SnippetNotFoundError(Exception):
-    pass
-
-
-class TooManyPinsError(Exception):
     pass
 
 
@@ -125,44 +118,3 @@ async def by_ids(
         return {}
     rows = await db.scalars(select(Snippet).where(Snippet.id.in_(ids), visible_to(viewer_id)))
     return {s.id: s for s in rows}
-
-
-async def pins(db: AsyncSession, viewer: User | None, owner: User) -> Pins:
-    rows = list(await db.scalars(select(Pin).where(Pin.user_id == owner.id).order_by(Pin.position)))
-    snippets = await by_ids(
-        db, viewer.id if viewer else None, [p.item_id for p in rows if p.item_type == "snippet"]
-    )
-    return Pins(
-        items=[
-            PinOut(type="snippet", snippet=to_out(snippets[p.item_id]))
-            for p in rows
-            if p.item_id in snippets
-        ]
-    )
-
-
-async def pin(db: AsyncSession, user: User, item: PinIn) -> Pins:
-    """Pin your own snippet to the end of your pins. Pinning twice changes nothing."""
-    await own(db, user, item.id)
-    existing = await db.get(Pin, (user.id, item.type, item.id))
-    if existing is None:
-        count, last = (
-            await db.execute(
-                select(func.count(), func.max(Pin.position)).where(Pin.user_id == user.id)
-            )
-        ).one()
-        if count >= MAX_PINS:
-            raise TooManyPinsError
-        db.add(Pin(user_id=user.id, item_type=item.type, item_id=item.id, position=(last or 0) + 1))
-        await db.commit()
-    return await pins(db, user, user)
-
-
-async def unpin(db: AsyncSession, user: User, item: PinIn) -> Pins:
-    await db.execute(
-        delete(Pin).where(
-            Pin.user_id == user.id, Pin.item_type == item.type, Pin.item_id == item.id
-        )
-    )
-    await db.commit()
-    return await pins(db, user, user)

@@ -56,10 +56,8 @@ Language = Literal[
     "zig",
 ]
 Visibility = Literal["public", "friends"]
-PinType = Literal["snippet"]
 
 MAX_SNIPPET_LENGTH = 50_000
-MAX_PINS = 6
 
 
 def _trim(value: object) -> object:
@@ -124,19 +122,3 @@ class SnippetOut(BaseModel):
 class SnippetPage(BaseModel):
     items: list[SnippetOut]
     next_cursor: uuid.UUID | None
-
-
-class PinIn(BaseModel):
-    type: PinType
-    id: uuid.UUID
-
-
-class PinOut(BaseModel):
-    type: PinType
-    snippet: SnippetOut | None = None
-
-
-class Pins(BaseModel):
-    """In the order they were pinned. Only what the viewer can see."""
-
-    items: list[PinOut]

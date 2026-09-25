@@ -21,6 +21,10 @@ class Settings(BaseSettings):
 
     github_client_id: str | None = None
     github_client_secret: str | None = None
+    # Optional token for reading public repos: 5,000 GitHub API calls an hour instead of 60.
+    github_token: str | None = None
+    # The worker refreshes a repo's stars and forks once it's this old.
+    repo_refresh_hours: int = 6
 
     # smtp sends real mail (Mailpit locally, Resend SMTP in production); console logs it;
     # memory keeps it in a list for tests.
