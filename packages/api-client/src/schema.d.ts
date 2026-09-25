@@ -174,6 +174,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/comments/{comment_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Delete Comment */
+        delete: operations["deleteComment"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/explore": {
         parameters: {
             query?: never;
@@ -570,6 +587,42 @@ export interface paths {
         patch: operations["updatePost"];
         trace?: never;
     };
+    "/v1/posts/{post_id}/comments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Comments */
+        get: operations["listComments"];
+        put?: never;
+        /** Create Comment */
+        post: operations["createComment"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/posts/{post_id}/reactions/{kind}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Add Reaction */
+        put: operations["addReaction"];
+        post?: never;
+        /** Remove Reaction */
+        delete: operations["removeReaction"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/tags/suggest": {
         parameters: {
             query?: never;
@@ -703,6 +756,44 @@ export interface components {
             /** Github */
             github: boolean;
         };
+        /** CommentCreate */
+        CommentCreate: {
+            /** Body Md */
+            body_md: string;
+        };
+        /** CommentOut */
+        CommentOut: {
+            author: components["schemas"]["UserSummary"];
+            /** Body Md */
+            body_md: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Mentions */
+            mentions: string[];
+            /**
+             * Post Id
+             * Format: uuid
+             */
+            post_id: string;
+        };
+        /**
+         * CommentPage
+         * @description Oldest first. Pass `next_cursor` as `cursor` for the next (newer) page.
+         */
+        CommentPage: {
+            /** Items */
+            items: components["schemas"]["CommentOut"][];
+            /** Next Cursor */
+            next_cursor: string | null;
+        };
         /** FriendRequestCreate */
         FriendRequestCreate: {
             /** Username */
@@ -833,7 +924,9 @@ export interface components {
              * Kind
              * @enum {string}
              */
-            kind: "friend_request" | "friend_accepted" | "mention";
+            kind: "friend_request" | "friend_accepted" | "mention" | "comment";
+            /** Post Id */
+            post_id: string | null;
             /** Read */
             read: boolean;
             /** Subject Id */
@@ -877,8 +970,16 @@ export interface components {
         };
         /** PostCreate */
         PostCreate: {
-            /** Body Md */
+            /**
+             * Body Md
+             * @default
+             */
             body_md: string;
+            /**
+             * Images
+             * @default []
+             */
+            images: components["schemas"]["PostImageIn"][];
             /**
              * Visibility
              * @default public
@@ -886,11 +987,35 @@ export interface components {
              */
             visibility: "public" | "friends";
         };
+        /**
+         * PostImageIn
+         * @description An image uploaded with kind `post`.
+         */
+        PostImageIn: {
+            /**
+             * Alt
+             * @default
+             */
+            alt: string;
+            /** Key */
+            key: string;
+        };
+        /** PostImageOut */
+        PostImageOut: {
+            /** Alt */
+            alt: string;
+            /** Key */
+            key: string;
+            /** Url */
+            url: string;
+        };
         /** PostOut */
         PostOut: {
             author: components["schemas"]["UserSummary"];
             /** Body Md */
             body_md: string;
+            /** Comment Count */
+            comment_count: number;
             /**
              * Created At
              * Format: date-time
@@ -903,6 +1028,8 @@ export interface components {
              * Format: uuid
              */
             id: string;
+            /** Images */
+            images: components["schemas"]["PostImageOut"][];
             /**
              * Kind
              * @constant
@@ -910,6 +1037,8 @@ export interface components {
             kind: "update";
             /** Mentions */
             mentions: string[];
+            /** Reactions */
+            reactions: components["schemas"]["ReactionCount"][];
             /** Tags */
             tags: components["schemas"]["TagOut"][];
             /**
@@ -925,13 +1054,20 @@ export interface components {
             /** Next Cursor */
             next_cursor: string | null;
         };
+        /** PostReactions */
+        PostReactions: {
+            /** Reactions */
+            reactions: components["schemas"]["ReactionCount"][];
+        };
         /**
          * PostUpdate
-         * @description Fields left out are unchanged.
+         * @description Fields left out are unchanged. `images` replaces the post's images.
          */
         PostUpdate: {
             /** Body Md */
             body_md?: string | null;
+            /** Images */
+            images?: components["schemas"]["PostImageIn"][] | null;
             /** Visibility */
             visibility?: ("public" | "friends") | null;
         };
@@ -1042,6 +1178,18 @@ export interface components {
             /** Website */
             website: string | null;
         };
+        /** ReactionCount */
+        ReactionCount: {
+            /** Count */
+            count: number;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "like" | "ship" | "love" | "idea" | "laugh" | "eyes";
+            /** Mine */
+            mine: boolean;
+        };
         /**
          * Relationship
          * @description How the signed-in person relates to someone. `request_id` is set while a request is open.
@@ -1113,7 +1261,7 @@ export interface components {
              * Kind
              * @enum {string}
              */
-            kind: "avatar" | "banner";
+            kind: "avatar" | "banner" | "post";
             /** Size */
             size: number;
         };
@@ -1450,6 +1598,35 @@ export interface operations {
                 };
                 content: {
                     "application/json": unknown;
+                };
+            };
+        };
+    };
+    deleteComment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                comment_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
@@ -2287,6 +2464,139 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PostOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    listComments: {
+        parameters: {
+            query?: {
+                cursor?: string | null;
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                post_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommentPage"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    createComment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                post_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CommentCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommentOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    addReaction: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                post_id: string;
+                kind: "like" | "ship" | "love" | "idea" | "laugh" | "eyes";
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PostReactions"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    removeReaction: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                post_id: string;
+                kind: "like" | "ship" | "love" | "idea" | "laugh" | "eyes";
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PostReactions"];
                 };
             };
             /** @description Validation Error */

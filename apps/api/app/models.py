@@ -2,13 +2,14 @@
 
 from app.modules.auth.models import EmailToken, OAuthAccount, UserSession
 from app.modules.notifications.models import Notification
-from app.modules.posts.models import Mention, Post, PostTag
+from app.modules.posts.models import Comment, Mention, Post, PostImage, PostTag, Reaction
 from app.modules.social.models import Block, FriendRequest, Friendship
 from app.modules.tags.models import Tag, UserTag
 from app.modules.users.models import Profile, ProfileLink, User
 
 __all__ = [
     "Block",
+    "Comment",
     "EmailToken",
     "FriendRequest",
     "Friendship",
@@ -16,9 +17,11 @@ __all__ = [
     "Notification",
     "OAuthAccount",
     "Post",
+    "PostImage",
     "PostTag",
     "Profile",
     "ProfileLink",
+    "Reaction",
     "Tag",
     "User",
     "UserSession",

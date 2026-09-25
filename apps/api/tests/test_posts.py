@@ -1,43 +1,6 @@
-from collections.abc import Callable
-
-import pytest
 from httpx import AsyncClient
 
-from tests.helpers import member
-
-NewClient = Callable[[], AsyncClient]
-
-
-@pytest.fixture
-async def ada(new_client: NewClient) -> AsyncClient:
-    c = new_client()
-    await member(c, "ada", "Ada Park")
-    return c
-
-
-@pytest.fixture
-async def ben(new_client: NewClient) -> AsyncClient:
-    c = new_client()
-    await member(c, "ben", "Ben Okafor")
-    return c
-
-
-@pytest.fixture
-async def cy(new_client: NewClient) -> AsyncClient:
-    c = new_client()
-    await member(c, "cyd", "Cy Doe")
-    return c
-
-
-async def befriend(a: AsyncClient, b: AsyncClient, b_username: str) -> None:
-    sent = (await a.post("/v1/friend-requests", json={"username": b_username})).json()
-    assert (await b.post(f"/v1/friend-requests/{sent['id']}/accept")).status_code == 200
-
-
-async def post(client: AsyncClient, body: str, visibility: str = "public") -> dict[str, object]:
-    response = await client.post("/v1/posts", json={"body_md": body, "visibility": visibility})
-    assert response.status_code == 201, response.text
-    return dict(response.json())
+from tests.helpers import befriend, post
 
 
 def bodies(page: dict[str, list[dict[str, str]]]) -> list[str]:
@@ -52,8 +15,8 @@ async def test_create_post_with_tags_mentions_and_code(ada: AsyncClient, ben: As
     created = await post(ada, f"  {body}  ")
     assert created["body_md"] == body  # trimmed
     assert created["kind"] == "update"
-    assert created["author"]["username"] == "ada"  # type: ignore[index]
-    assert [t["slug"] for t in created["tags"]] == ["postgres", "rust"]  # type: ignore[attr-defined]
+    assert created["author"]["username"] == "ada"
+    assert [t["slug"] for t in created["tags"]] == ["postgres", "rust"]
     assert created["mentions"] == ["ben"]
     assert created["edited_at"] is None
 

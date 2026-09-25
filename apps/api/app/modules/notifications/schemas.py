@@ -6,15 +6,18 @@ from pydantic import BaseModel
 
 from app.modules.users.schemas import UserSummary
 
-NotificationKind = Literal["friend_request", "friend_accepted", "mention"]
+NotificationKind = Literal["friend_request", "friend_accepted", "mention", "comment"]
 
 
 class NotificationOut(BaseModel):
     id: uuid.UUID
     kind: NotificationKind
     actor: UserSummary
-    # What it's about: the friend request for friend_*, the post for mention.
+    # What it's about: the friend request for friend_*, the comment for comment, and the post
+    # or comment for mention.
     subject_id: uuid.UUID | None
+    # The post a mention or comment is on.
+    post_id: uuid.UUID | None
     created_at: datetime
     read: bool
 

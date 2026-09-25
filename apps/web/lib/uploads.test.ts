@@ -21,5 +21,8 @@ describe('imageProblem', () => {
     expect(imageProblem('banner', { type: 'image/gif', size: 5 * MB + 1 })).toBe(
       'Banners can be up to 5 MB.',
     )
+    expect(imageProblem('post', { type: 'image/jpeg', size: 5 * MB + 1 })).toBe(
+      'Images can be up to 5 MB.',
+    )
   })
 })
