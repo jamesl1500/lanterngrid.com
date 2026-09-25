@@ -2,6 +2,7 @@
 
 import type { Schemas } from '@lanterngrid/api-client'
 import { Alert, Button } from '@lanterngrid/ui'
+import type { Route } from 'next'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 
@@ -38,6 +39,16 @@ export function FriendActions({ username, relationship }: Props) {
   const unfriend = () =>
     run(() => attempt(() => browserApi.DELETE('/v1/me/friends/{username}', path)))
   const block = () => run(() => attempt(() => browserApi.PUT('/v1/me/blocks/{username}', path)))
+  const message = async () => {
+    setBusy(true)
+    setError(null)
+    const result = await attempt(() =>
+      browserApi.POST('/v1/conversations', { body: { usernames: [username] } }),
+    )
+    if (result.ok) return router.push(`/messages/${result.data.id}` as Route)
+    setBusy(false)
+    setError(result.problem.message)
+  }
   const unblock = () =>
     run(() => attempt(() => browserApi.DELETE('/v1/me/blocks/{username}', path)))
 
@@ -67,9 +78,19 @@ export function FriendActions({ username, relationship }: Props) {
             </Button>
           </>
         ) : status === 'friends' ? (
-          <span className="border-2 border-lime bg-lime-soft px-2 py-1 font-mono text-xs text-lime">
-            ✓ friends
-          </span>
+          <>
+            <span className="border-2 border-lime bg-lime-soft px-2 py-1 font-mono text-xs text-lime">
+              ✓ friends
+            </span>
+            <Button
+              size="sm"
+              disabled={busy}
+              onClick={message}
+              className="bg-magenta text-[#0c1017]"
+            >
+              Message
+            </Button>
+          </>
         ) : (
           <Button size="sm" variant="secondary" disabled={busy} onClick={unblock}>
             Unblock
