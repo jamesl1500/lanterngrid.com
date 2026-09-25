@@ -1,6 +1,10 @@
 import os
+import threading
 import time
 import uuid
+
+_lock = threading.Lock()
+_last = 0
 
 
 def uuid7() -> uuid.UUID:
@@ -16,4 +20,11 @@ def uuid7() -> uuid.UUID:
     value |= ((rand >> 62) & 0xFFF) << 64  # rand_a
     value |= 0b10 << 62  # variant
     value |= rand & 0x3FFF_FFFF_FFFF_FFFF  # rand_b
+    # Keep ids from this process strictly increasing, even within one millisecond, so
+    # things created back to back list in the order they were made.
+    global _last
+    with _lock:
+        if value <= _last:
+            value = _last + 1
+        _last = value
     return uuid.UUID(int=value)

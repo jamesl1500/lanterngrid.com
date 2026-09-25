@@ -25,14 +25,27 @@ export async function SiteHeader() {
   const unread = me?.username ? await unreadCount() : 0
   return (
     <header className="border-b-2 border-line-strong bg-surface">
-      <div className="mx-auto flex h-14 max-w-6xl items-center gap-6 px-4">
+      <div className="mx-auto flex h-14 max-w-6xl items-center gap-4 px-4 sm:gap-6">
         <Logo />
-        <nav className="flex gap-5 font-mono text-sm text-ink-2">
+        <nav className="flex gap-4 font-mono text-sm text-ink-2 sm:gap-5">
           {me?.username ? (
-            <Link href="/friends" className="hover:text-ink">
-              friends
+            <>
+              {/* The logo goes home too, so phones skip this link to fit. */}
+              <Link href="/" className="hidden hover:text-ink sm:inline">
+                feed
+              </Link>
+              <Link href="/explore" className="hover:text-ink">
+                explore
+              </Link>
+              <Link href="/friends" className="hover:text-ink">
+                friends
+              </Link>
+            </>
+          ) : (
+            <Link href="/explore" className="hover:text-ink">
+              explore
             </Link>
-          ) : null}
+          )}
           <Link href="/kit" className="hidden hover:text-ink sm:inline">
             ui kit
           </Link>

@@ -5,9 +5,10 @@ import { notFound } from 'next/navigation'
 import { cache } from 'react'
 
 import { FriendActions } from '@/components/friend-actions'
+import { PostList } from '@/components/post-list'
 import { serverApi } from '@/lib/api'
 import { linkKindLabel, shortUrl } from '@/lib/links'
-import { sessionToken } from '@/lib/session'
+import { getMe, sessionToken } from '@/lib/session'
 
 // Signed in, the API also says how the viewer relates to this person.
 const getProfile = cache(async (username: string) => {
@@ -22,7 +23,10 @@ const getProfile = cache(async (username: string) => {
   return profile.data ? { ...profile.data, friends: friends.data?.items ?? [] } : null
 })
 
-type Props = { params: Promise<{ username: string }> }
+type Props = {
+  params: Promise<{ username: string }>
+  searchParams: Promise<{ cursor?: string }>
+}
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const profile = await getProfile((await params).username)
@@ -35,16 +39,21 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 const joined = new Intl.DateTimeFormat('en', { month: 'long', year: 'numeric' })
 
-export default async function ProfilePage({ params }: Props) {
-  const profile = await getProfile((await params).username)
+export default async function ProfilePage({ params, searchParams }: Props) {
+  const { username } = await params
+  const [profile, { cursor }, me] = await Promise.all([getProfile(username), searchParams, getMe()])
   if (!profile) notFound()
+  const { data: posts } = await serverApi(await sessionToken()).GET('/v1/users/{username}/posts', {
+    params: { path: { username: profile.username }, query: { cursor, limit: 20 } },
+    cache: 'no-store',
+  })
   const relationship = profile.relationship
   const isMe = relationship?.status === 'self'
   const accent = accentClasses[profile.accent_color as Accent]
   const website = profile.website?.replace(/^https?:\/\//, '').replace(/\/$/, '')
 
   return (
-    <main className="mx-auto grid max-w-4xl gap-8 px-4 py-8">
+    <main className="mx-auto grid max-w-4xl grid-cols-1 gap-8 px-4 py-8">
       <Card raised className="overflow-hidden">
         <div
           className={cn(
@@ -184,16 +193,23 @@ export default async function ProfilePage({ params }: Props) {
         </section>
       ) : null}
 
-      <section className="grid gap-4">
+      <section className="grid grid-cols-1 gap-4">
         <h2 className="border-b-2 border-line-strong pb-2 text-xl font-bold">Posts</h2>
-        <Card className="grid place-items-center gap-2 px-6 py-12 text-center">
-          <span className="label">nothing here yet</span>
-          <p className="max-w-[40ch] text-ink-2">
-            {isMe
-              ? 'Your updates, snippets and wins will show up here.'
-              : `${profile.display_name} hasn't posted anything yet.`}
-          </p>
-        </Card>
+        <PostList
+          page={posts ?? { items: [], next_cursor: null }}
+          viewerId={me?.id}
+          olderHref={(next) => `/u/${profile.username}?cursor=${next}`}
+          empty={
+            <>
+              <span className="label">nothing here yet</span>
+              <p className="max-w-[40ch] text-ink-2">
+                {isMe
+                  ? 'Your updates, snippets and wins will show up here.'
+                  : `${profile.display_name} hasn't posted anything you can see yet.`}
+              </p>
+            </>
+          }
+        />
       </section>
     </main>
   )
