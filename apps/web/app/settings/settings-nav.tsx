@@ -7,6 +7,7 @@ import { usePathname } from 'next/navigation'
 const items = [
   { href: '/settings/profile', label: 'Profile' },
   { href: '/settings/account', label: 'Account' },
+  { href: '/settings/blocked', label: 'Blocked' },
 ] as const
 
 export function SettingsNav() {

@@ -41,7 +41,8 @@ See README.md for setup and commands.
 - FastAPI owns auth. The session cookie `lg_session` holds a random token; only its SHA-256 is
   stored (`sessions` table). Email links (`email_tokens`) work the same way and are single-use.
 - Routes get the signed-in person from `CurrentUserDep` / `OptionalUserDep`
-  (`app.modules.auth.deps`). Writes from another site's `Origin` are rejected in `app/main.py`.
+  (`app.modules.auth.deps`); social features use `MemberDep`, which also requires a username.
+  Writes from another site's `Origin` are rejected in `app/main.py`.
 - On the web side, server components use `getMe()` / `requireMe()` from `lib/session.ts`;
   client forms call `browserApi` and wrap calls in `attempt()` from `lib/errors.ts`.
 - A signed-in account has no username until onboarding; `requireMe()` sends it there.

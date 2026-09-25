@@ -10,6 +10,8 @@ from app.core.logging import configure_logging
 from app.modules.auth.router import router as auth_router
 from app.modules.health.router import router as health_router
 from app.modules.media.router import router as media_router
+from app.modules.notifications.router import router as notifications_router
+from app.modules.social.router import router as social_router
 from app.modules.tags.router import router as tags_router
 from app.modules.users.router import router as users_router
 
@@ -47,7 +49,15 @@ def create_app() -> FastAPI:
             )
         return await call_next(request)
 
-    for router in (health_router, auth_router, users_router, media_router, tags_router):
+    for router in (
+        health_router,
+        auth_router,
+        users_router,
+        media_router,
+        tags_router,
+        social_router,
+        notifications_router,
+    ):
         app.include_router(router, prefix=API_PREFIX)
     return app
 

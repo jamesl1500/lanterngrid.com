@@ -46,7 +46,7 @@ the callback URL `http://localhost:3000/api/v1/auth/github/callback` and put its
 secret in `.env`.
 
 Avatars and banners upload straight from the browser to MinIO (console at
-http://localhost:9001, user and password `lanterngrid`); `pnpm services:up` creates the
+http://localhost:9101, user and password `lanterngrid`); `pnpm services:up` creates the
 `lanterngrid-media` bucket.
 
 The system status panel on the home page shows whether the API,

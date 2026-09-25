@@ -24,3 +24,13 @@ async def get_current_user(user: Annotated[User | None, Depends(get_optional_use
 
 OptionalUserDep = Annotated[User | None, Depends(get_optional_user)]
 CurrentUserDep = Annotated[User, Depends(get_current_user)]
+
+
+async def get_member(user: Annotated[User, Depends(get_current_user)]) -> User:
+    """A signed-in person who has finished onboarding, so others can find and link to them."""
+    if user.username is None:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Pick a username first.")
+    return user
+
+
+MemberDep = Annotated[User, Depends(get_member)]

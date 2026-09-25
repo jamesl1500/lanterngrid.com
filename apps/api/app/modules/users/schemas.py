@@ -100,6 +100,27 @@ class Me(BaseModel):
     created_at: datetime
 
 
+class UserSummary(BaseModel):
+    id: uuid.UUID
+    username: str
+    display_name: str
+    headline: str | None
+    avatar_url: str | None
+    accent_color: Accent
+
+
+RelationshipStatus = Literal[
+    "self", "none", "friends", "request_sent", "request_received", "blocked"
+]  # fmt: skip
+
+
+class Relationship(BaseModel):
+    """How the signed-in person relates to someone. `request_id` is set while a request is open."""
+
+    status: RelationshipStatus
+    request_id: uuid.UUID | None = None
+
+
 class ProfileLinkOut(BaseModel):
     kind: LinkKind
     url: str
@@ -128,6 +149,9 @@ class PublicProfile(BaseModel):
     banner_url: str | None
     links: list[ProfileLinkOut]
     tags: list[TagOut]
+    friend_count: int
+    # How the signed-in viewer relates to this person; null when signed out.
+    relationship: Relationship | None
     joined_at: datetime
 
 
