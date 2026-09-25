@@ -1,8 +1,9 @@
 from fastapi import APIRouter, HTTPException, status
 
 from app.core.db import SessionDep
-from app.modules.auth.deps import CurrentUserDep
+from app.modules.auth.deps import CurrentUserDep, OptionalUserDep
 from app.modules.auth.service import build_me
+from app.modules.social import service as social
 from app.modules.users import service
 from app.modules.users.schemas import (
     LinksUpdate,
@@ -19,11 +20,18 @@ router = APIRouter(tags=["users"])
 
 
 @router.get("/users/{username}", operation_id="getPublicProfile")
-async def get_public_profile(username: str, db: SessionDep) -> PublicProfile:
+async def get_public_profile(
+    username: str, db: SessionDep, viewer: OptionalUserDep
+) -> PublicProfile:
     user = await service.get_by_username(db, username)
-    if user is None or user.username is None:
+    # Someone who blocked you looks, to you, like they don't exist.
+    if (
+        user is None
+        or user.username is None
+        or (viewer is not None and await social.has_blocked(db, user.id, viewer.id))
+    ):
         raise HTTPException(status.HTTP_404_NOT_FOUND, "No one here by that name.")
-    return await service.public_profile(db, user)
+    return await service.public_profile(db, user, viewer)
 
 
 @router.get("/usernames/{username}", operation_id="checkUsername")

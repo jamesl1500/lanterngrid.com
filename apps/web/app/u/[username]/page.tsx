@@ -1,19 +1,25 @@
 import { accentClasses, Avatar, Button, Card, cn, Tag, type Accent } from '@lanterngrid/ui'
-import type { Metadata } from 'next'
+import type { Metadata, Route } from 'next'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { cache } from 'react'
 
+import { FriendActions } from '@/components/friend-actions'
 import { serverApi } from '@/lib/api'
 import { linkKindLabel, shortUrl } from '@/lib/links'
-import { getMe } from '@/lib/session'
+import { sessionToken } from '@/lib/session'
 
+// Signed in, the API also says how the viewer relates to this person.
 const getProfile = cache(async (username: string) => {
-  const { data } = await serverApi().GET('/v1/users/{username}', {
-    params: { path: { username } },
-    cache: 'no-store',
-  })
-  return data ?? null
+  const api = serverApi(await sessionToken())
+  const [profile, friends] = await Promise.all([
+    api.GET('/v1/users/{username}', { params: { path: { username } }, cache: 'no-store' }),
+    api.GET('/v1/users/{username}/friends', {
+      params: { path: { username }, query: { limit: 8 } },
+      cache: 'no-store',
+    }),
+  ])
+  return profile.data ? { ...profile.data, friends: friends.data?.items ?? [] } : null
 })
 
 type Props = { params: Promise<{ username: string }> }
@@ -32,8 +38,8 @@ const joined = new Intl.DateTimeFormat('en', { month: 'long', year: 'numeric' })
 export default async function ProfilePage({ params }: Props) {
   const profile = await getProfile((await params).username)
   if (!profile) notFound()
-  const me = await getMe()
-  const isMe = me?.username?.toLowerCase() === profile.username.toLowerCase()
+  const relationship = profile.relationship
+  const isMe = relationship?.status === 'self'
   const accent = accentClasses[profile.accent_color as Accent]
   const website = profile.website?.replace(/^https?:\/\//, '').replace(/\/$/, '')
 
@@ -66,7 +72,17 @@ export default async function ProfilePage({ params }: Props) {
               <Button asChild variant="secondary" size="sm">
                 <Link href="/settings/profile">Edit profile</Link>
               </Button>
-            ) : null}
+            ) : relationship ? (
+              <FriendActions username={profile.username} relationship={relationship} />
+            ) : (
+              <Button asChild variant="accent" size="sm">
+                <Link
+                  href={`/signin?next=${encodeURIComponent(`/u/${profile.username}`)}` as Route}
+                >
+                  Sign in to add friend
+                </Link>
+              </Button>
+            )}
           </div>
           <div className="grid gap-1">
             <h1 className="text-3xl font-bold sm:text-4xl">{profile.display_name}</h1>
@@ -90,6 +106,14 @@ export default async function ProfilePage({ params }: Props) {
                 </a>
               </li>
             ) : null}
+            <li>
+              <Link
+                href={`/u/${profile.username}/friends` as Route}
+                className="hover:text-ink hover:underline"
+              >
+                {profile.friend_count} {profile.friend_count === 1 ? 'friend' : 'friends'}
+              </Link>
+            </li>
             <li>joined {joined.format(new Date(profile.joined_at))}</li>
           </ul>
           {profile.tags.length > 0 ? (
@@ -124,6 +148,41 @@ export default async function ProfilePage({ params }: Props) {
           ) : null}
         </div>
       </Card>
+
+      {profile.friends.length > 0 ? (
+        <section className="grid gap-4">
+          <div className="flex items-end justify-between border-b-2 border-line-strong pb-2">
+            <h2 className="text-xl font-bold">Friends</h2>
+            <Link
+              href={`/u/${profile.username}/friends` as Route}
+              className="font-mono text-xs text-ink-2 hover:text-ink"
+            >
+              see all {profile.friend_count} →
+            </Link>
+          </div>
+          <ul className="grid grid-cols-4 gap-3 sm:grid-cols-8">
+            {profile.friends.map((friend) => (
+              <li key={friend.id}>
+                <Link
+                  href={`/u/${friend.username}` as Route}
+                  className="grid justify-items-center gap-1.5 text-center"
+                  title={friend.display_name}
+                >
+                  <Avatar
+                    name={friend.display_name}
+                    src={friend.avatar_url}
+                    accent={friend.accent_color as Accent}
+                    size="lg"
+                  />
+                  <span className="w-full truncate font-mono text-xs text-ink-2">
+                    @{friend.username}
+                  </span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
 
       <section className="grid gap-4">
         <h2 className="border-b-2 border-line-strong pb-2 text-xl font-bold">Posts</h2>

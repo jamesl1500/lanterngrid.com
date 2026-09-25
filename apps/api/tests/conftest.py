@@ -6,7 +6,7 @@ database engine are created at import time.
 
 import asyncio
 import os
-from collections.abc import AsyncIterator, Iterator
+from collections.abc import AsyncIterator, Callable, Iterator
 from pathlib import Path
 
 import asyncpg
@@ -89,6 +89,21 @@ async def clean_state() -> AsyncIterator[None]:
 async def client() -> AsyncIterator[AsyncClient]:
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://testserver") as c:
         yield c
+
+
+@pytest.fixture
+async def new_client() -> AsyncIterator[Callable[[], AsyncClient]]:
+    """Make more clients, each with its own cookies, for tests with several people."""
+    clients: list[AsyncClient] = []
+
+    def make() -> AsyncClient:
+        c = AsyncClient(transport=ASGITransport(app=app), base_url="http://testserver")
+        clients.append(c)
+        return c
+
+    yield make
+    for c in clients:
+        await c.aclose()
 
 
 @pytest.fixture(autouse=True)

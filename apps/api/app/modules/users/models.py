@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import DateTime, ForeignKey, Index, SmallInteger, String, Text, func
+from sqlalchemy import DateTime, ForeignKey, Index, SmallInteger, String, Text, func, text
 from sqlalchemy.dialects.postgresql import CITEXT
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -12,6 +12,19 @@ from app.core.models import TimestampMixin
 
 class User(TimestampMixin, Base):
     __tablename__ = "users"
+    __table_args__ = (
+        # People search: username prefixes and loose name matches (pg_trgm).
+        Index(
+            "ix_users_username_trgm",
+            text("lower(username::text) gin_trgm_ops"),
+            postgresql_using="gin",
+        ),
+        Index(
+            "ix_users_display_name_trgm",
+            text("lower(display_name) gin_trgm_ops"),
+            postgresql_using="gin",
+        ),
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid7)
     email: Mapped[str] = mapped_column(CITEXT, unique=True)

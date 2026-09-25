@@ -33,3 +33,14 @@ def token_from_last_email(path: str) -> str:
     match = re.search(rf"{path}\?token=([\w-]+)", outbox[-1].text)
     assert match, outbox[-1].text
     return match.group(1)
+
+
+async def member(client: AsyncClient, username: str, display_name: str | None = None) -> str:
+    """Sign up and onboard someone on this client; returns their username."""
+    await sign_up(client, email=f"{username}@example.com", display_name=display_name or username)
+    response = await client.post(
+        "/v1/me/onboarding",
+        json={"username": username, "display_name": display_name or username.capitalize()},
+    )
+    assert response.status_code == 200, response.text
+    return username

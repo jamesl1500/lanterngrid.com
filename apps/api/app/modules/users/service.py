@@ -6,6 +6,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.storage import public_url
+from app.modules.social import service as social
 from app.modules.tags import service as tags
 from app.modules.users.models import ProfileLink, User
 from app.modules.users.schemas import (
@@ -105,7 +106,7 @@ async def profile_settings(db: AsyncSession, user: User) -> ProfileSettings:
     )
 
 
-async def public_profile(db: AsyncSession, user: User) -> PublicProfile:
+async def public_profile(db: AsyncSession, user: User, viewer: User | None) -> PublicProfile:
     assert user.username is not None
     p = user.profile
     return PublicProfile(
@@ -120,5 +121,7 @@ async def public_profile(db: AsyncSession, user: User) -> PublicProfile:
         banner_url=public_url(p.banner_key),
         links=await links(db, user.id),
         tags=await tags.user_tags(db, user.id),
+        friend_count=await social.friend_count(db, user.id),
+        relationship=await social.relationship(db, viewer, user) if viewer else None,
         joined_at=user.created_at,
     )

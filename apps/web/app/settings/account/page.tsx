@@ -5,6 +5,7 @@ import type { ReactNode } from 'react'
 import {
   ResendVerificationButton,
   SendPasswordResetButton,
+  SignOutButton,
   SignOutEverywhereButton,
 } from '@/components/account-actions'
 import { GitHubMark } from '@/components/auth/github-button'
@@ -99,7 +100,10 @@ export default async function AccountSettingsPage({
           Signed in somewhere you shouldn&apos;t be? This signs you out on every browser, including
           this one.
         </p>
-        <SignOutEverywhereButton />
+        <div className="flex flex-wrap gap-2">
+          <SignOutButton />
+          <SignOutEverywhereButton />
+        </div>
       </Section>
     </Card>
   )
