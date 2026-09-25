@@ -29,8 +29,12 @@ See README.md for setup and commands.
 - Python: Ruff (lint + format) and mypy strict must pass. TypeScript: ESLint, Prettier and
   strict tsc must pass.
 - API tests run against a real Postgres and Redis, not mocks. `tests/conftest.py` points them at
-  a separate `<db>_test` database and Redis db 15, and truncates every table after each test.
-  Only outside services (GitHub) are faked, by overriding their FastAPI dependency.
+  a separate `<db>_test` database and Redis db 15, and truncates every table after each test
+  (seeded `tags` rows are kept). Only outside services (GitHub, file storage) are faked, by
+  overriding their FastAPI dependency; see `tests/fakes.py`.
+- Uploads never pass through the API: the browser gets a presigned PUT URL from
+  `POST /v1/me/uploads`, sends the file to the bucket, then attaches the key. Store object keys
+  in the database, not URLs; build URLs with `public_url()`.
 
 ## Auth
 

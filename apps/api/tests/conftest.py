@@ -6,7 +6,7 @@ database engine are created at import time.
 
 import asyncio
 import os
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Iterator
 from pathlib import Path
 
 import asyncpg
@@ -66,15 +66,21 @@ from sqlalchemy import text  # noqa: E402
 from app.core.db import Base, engine  # noqa: E402
 from app.core.email import outbox  # noqa: E402
 from app.core.redis import redis  # noqa: E402
+from app.core.storage import get_storage  # noqa: E402
 from app.main import app  # noqa: E402
+from tests.fakes import FakeStorage  # noqa: E402
+
+# Seeded by migrations; tests remove only the rows they add.
+KEEP_TABLES = frozenset({"tags"})
 
 
 @pytest.fixture(autouse=True)
 async def clean_state() -> AsyncIterator[None]:
     yield
-    tables = ", ".join(t.name for t in Base.metadata.sorted_tables)
+    tables = ", ".join(t.name for t in Base.metadata.sorted_tables if t.name not in KEEP_TABLES)
     async with engine.begin() as conn:
         await conn.execute(text(f"truncate {tables} cascade"))
+        await conn.execute(text("delete from tags where not curated"))
     await redis.flushdb()
     outbox.clear()
 
@@ -83,3 +89,11 @@ async def clean_state() -> AsyncIterator[None]:
 async def client() -> AsyncIterator[AsyncClient]:
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://testserver") as c:
         yield c
+
+
+@pytest.fixture(autouse=True)
+def storage() -> Iterator[FakeStorage]:
+    fake = FakeStorage()
+    app.dependency_overrides[get_storage] = lambda: fake
+    yield fake
+    app.dependency_overrides.pop(get_storage, None)

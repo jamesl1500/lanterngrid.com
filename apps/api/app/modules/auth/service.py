@@ -12,6 +12,7 @@ from app.core.security import (
     password_needs_rehash,
     verify_password,
 )
+from app.core.storage import public_url
 from app.modules.auth.models import EmailToken, OAuthAccount, TokenPurpose, UserSession
 from app.modules.users.models import Profile, User
 from app.modules.users.schemas import Me
@@ -81,6 +82,7 @@ async def build_me(db: AsyncSession, user: User) -> Me:
         display_name=user.display_name,
         headline=user.profile.headline,
         accent_color=user.profile.accent_color,
+        avatar_url=public_url(user.profile.avatar_key),
         has_password=user.password_hash is not None,
         github_login=await github_login(db, user),
         created_at=user.created_at,

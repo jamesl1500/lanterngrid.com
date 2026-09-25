@@ -1,10 +1,11 @@
-import { accentClasses, Avatar, Button, Card, type Accent } from '@lanterngrid/ui'
+import { accentClasses, Avatar, Button, Card, cn, Tag, type Accent } from '@lanterngrid/ui'
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { cache } from 'react'
 
 import { serverApi } from '@/lib/api'
+import { linkKindLabel, shortUrl } from '@/lib/links'
 import { getMe } from '@/lib/session'
 
 const getProfile = cache(async (username: string) => {
@@ -40,7 +41,15 @@ export default async function ProfilePage({ params }: Props) {
     <main className="mx-auto grid max-w-4xl gap-8 px-4 py-8">
       <Card raised className="overflow-hidden">
         <div
-          className={`bg-grid relative h-36 border-b-2 border-line-strong sm:h-44 ${accent.soft}`}
+          className={cn(
+            'relative h-36 border-b-2 border-line-strong bg-cover bg-center sm:h-44',
+            !profile.banner_url && ['bg-grid', accent.soft],
+          )}
+          style={
+            profile.banner_url
+              ? { backgroundImage: `url(${JSON.stringify(profile.banner_url)})` }
+              : undefined
+          }
         >
           <div className={`absolute inset-x-0 bottom-0 h-1.5 ${accent.solid}`} />
         </div>
@@ -48,6 +57,7 @@ export default async function ProfilePage({ params }: Props) {
           <div className="relative -mt-14 flex flex-wrap items-end justify-between gap-4">
             <Avatar
               name={profile.display_name}
+              src={profile.avatar_url}
               accent={profile.accent_color as Accent}
               size="xl"
               className="shadow-hard"
@@ -82,6 +92,36 @@ export default async function ProfilePage({ params }: Props) {
             ) : null}
             <li>joined {joined.format(new Date(profile.joined_at))}</li>
           </ul>
+          {profile.tags.length > 0 ? (
+            <ul aria-label="Stack" className="flex flex-wrap gap-1.5">
+              {profile.tags.map((tag) => (
+                <li key={tag.slug}>
+                  <Tag name={tag.name} accent={profile.accent_color as Accent} />
+                </li>
+              ))}
+            </ul>
+          ) : null}
+          {profile.links.length > 0 ? (
+            <ul aria-label="Links" className="flex flex-wrap gap-2">
+              {profile.links.map((link, index) => (
+                <li key={index}>
+                  <a
+                    href={link.url}
+                    rel="me nofollow noopener"
+                    target="_blank"
+                    className="flex items-center border border-line-strong bg-sunk font-mono text-xs transition-colors hover:bg-surface"
+                  >
+                    <span className={cn('border-r border-line-strong px-2 py-1', accent.text)}>
+                      {linkKindLabel[link.kind]}
+                    </span>
+                    <span className="max-w-[28ch] truncate px-2 py-1 text-ink-2">
+                      {shortUrl(link.url)}
+                    </span>
+                  </a>
+                </li>
+              ))}
+            </ul>
+          ) : null}
         </div>
       </Card>
 

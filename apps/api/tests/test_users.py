@@ -113,3 +113,43 @@ async def test_update_profile_validates(client: AsyncClient) -> None:
 async def test_profile_endpoints_need_a_session(client: AsyncClient) -> None:
     assert (await client.get("/v1/me/profile")).status_code == 401
     assert (await client.patch("/v1/me/profile", json={})).status_code == 401
+    assert (await client.put("/v1/me/links", json={"links": []})).status_code == 401
+    assert (await client.put("/v1/me/tags", json={"tags": []})).status_code == 401
+
+
+async def test_set_links_replaces_the_list_in_order(client: AsyncClient) -> None:
+    await sign_up(client)
+    await onboard(client)
+    links = [
+        {"kind": "github", "url": "https://github.com/adapark"},
+        {"kind": "mastodon", "url": "https://hachyderm.io/@ada"},
+        {"kind": "blog", "url": " https://ada.dev/blog "},
+    ]
+    response = await client.put("/v1/me/links", json={"links": links})
+    assert response.status_code == 200, response.text
+    assert [link["kind"] for link in response.json()] == ["github", "mastodon", "blog"]
+    assert response.json()[2]["url"] == "https://ada.dev/blog"
+
+    await client.put("/v1/me/links", json={"links": links[1:2]})
+    settings = (await client.get("/v1/me/profile")).json()
+    assert settings["links"] == [{"kind": "mastodon", "url": "https://hachyderm.io/@ada"}]
+    profile = (await client.get("/v1/users/adapark")).json()
+    assert profile["links"] == settings["links"]
+
+
+async def test_set_links_validates(client: AsyncClient) -> None:
+    await sign_up(client)
+    bad = [
+        {"kind": "github", "url": "javascript:alert(1)"},
+        {"kind": "myspace", "url": "https://myspace.com/ada"},
+        {"kind": "blog", "url": ""},
+    ]
+    response = await client.put("/v1/me/links", json={"links": bad})
+    assert response.status_code == 422
+    assert {tuple(e["loc"][2:4]) for e in response.json()["detail"]} == {
+        (0, "url"),
+        (1, "kind"),
+        (2, "url"),
+    }
+    nine = [{"kind": "other", "url": f"https://example.com/{i}"} for i in range(9)]
+    assert (await client.put("/v1/me/links", json={"links": nine})).status_code == 422
