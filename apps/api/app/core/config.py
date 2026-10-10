@@ -15,6 +15,9 @@ class Settings(BaseSettings):
 
     # Public URL of the web app. Links in emails and OAuth redirects point here.
     web_url: str = "http://localhost:3000"
+    # Where browsers open the realtime socket. It goes straight to the API: the web app's /api
+    # proxy (and Vercel) can't carry WebSockets.
+    realtime_url: str = "ws://localhost:8000/v1/realtime"
 
     session_cookie_name: str = "lg_session"
     session_ttl_days: int = 30

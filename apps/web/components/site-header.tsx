@@ -6,28 +6,33 @@ import { getMe, sessionToken } from '@/lib/session'
 
 import { SignOutButton } from './account-actions'
 import { Logo } from './logo'
+import { MessagesLink } from './messages-link'
 import { NotificationBell } from './notification-bell'
 
-async function unreadCount() {
+async function unreadCounts() {
   try {
-    const { data } = await serverApi(await sessionToken()).GET(
-      '/v1/me/notifications/unread-count',
-      { cache: 'no-store' },
-    )
-    return data?.count ?? 0
+    const api = serverApi(await sessionToken())
+    const [notifications, conversations] = await Promise.all([
+      api.GET('/v1/me/notifications/unread-count', { cache: 'no-store' }),
+      api.GET('/v1/conversations/unread-count', { cache: 'no-store' }),
+    ])
+    return {
+      notifications: notifications.data?.count ?? 0,
+      conversations: conversations.data?.conversations ?? 0,
+    }
   } catch {
-    return 0
+    return { notifications: 0, conversations: 0 }
   }
 }
 
 export async function SiteHeader() {
   const me = await getMe()
-  const unread = me?.username ? await unreadCount() : 0
+  const unread = me?.username ? await unreadCounts() : { notifications: 0, conversations: 0 }
   return (
     <header className="border-b-2 border-line-strong bg-surface">
-      <div className="mx-auto flex h-14 max-w-6xl items-center gap-4 px-4 sm:gap-6">
+      <div className="mx-auto flex h-14 max-w-6xl items-center gap-3 px-4 sm:gap-6">
         <Logo />
-        <nav className="flex gap-4 font-mono text-sm text-ink-2 sm:gap-5">
+        <nav className="flex gap-3 font-mono text-sm text-ink-2 sm:gap-5">
           {me?.username ? (
             <>
               {/* The logo goes home too, so phones skip this link to fit. */}
@@ -50,10 +55,15 @@ export async function SiteHeader() {
             ui kit
           </Link>
         </nav>
-        <div className="ml-auto flex items-center gap-2">
+        <div className="ml-auto flex items-center gap-1 sm:gap-2">
           {me ? (
             <>
-              {me.username ? <NotificationBell initialCount={unread} /> : null}
+              {me.username ? (
+                <>
+                  <MessagesLink meId={me.id} initialCount={unread.conversations} />
+                  <NotificationBell initialCount={unread.notifications} />
+                </>
+              ) : null}
               {me.username ? (
                 <Link
                   href={`/u/${me.username}`}

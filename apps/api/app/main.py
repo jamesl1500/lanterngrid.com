@@ -10,9 +10,11 @@ from app.core.logging import configure_logging
 from app.modules.auth.router import router as auth_router
 from app.modules.health.router import router as health_router
 from app.modules.media.router import router as media_router
+from app.modules.messaging.router import router as messaging_router
 from app.modules.notifications.router import router as notifications_router
 from app.modules.pins.router import router as pins_router
 from app.modules.posts.router import router as posts_router
+from app.modules.realtime.router import router as realtime_router
 from app.modules.repos.router import router as repos_router
 from app.modules.snippets.router import router as snippets_router
 from app.modules.social.router import router as social_router
@@ -65,6 +67,8 @@ def create_app() -> FastAPI:
         snippets_router,
         repos_router,
         pins_router,
+        messaging_router,
+        realtime_router,
     ):
         app.include_router(router, prefix=API_PREFIX)
     return app

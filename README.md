@@ -84,6 +84,9 @@ New migration: `cd apps/api && uv run alembic revision --autogenerate -m "add us
   `https://<web domain>/api/v1/auth/github/callback`). Use `alembic upgrade head` as the
   pre-deploy command. Set `GITHUB_TOKEN` (a token with no scopes) so repo cards get 5,000
   GitHub calls an hour.
+  Set `REALTIME_URL` to `wss://<api domain>/v1/realtime`: chat sockets go straight to the API,
+  since Vercel can't proxy WebSockets. Any number of API replicas can serve chat; Redis fans
+  messages out between them.
 - **Worker** is a second Railway service from the same image with the start command
   `python -m app.worker` and the same variables as the API. Run exactly one replica: it also
   fires the schedule, and two would run every job twice.
