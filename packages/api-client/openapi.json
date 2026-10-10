@@ -643,8 +643,8 @@
       "MessageCreate": {
         "properties": {
           "body": {
+            "default": "",
             "maxLength": 4000,
-            "minLength": 1,
             "title": "Body",
             "type": "string"
           },
@@ -653,10 +653,21 @@
             "minLength": 1,
             "title": "Client Id",
             "type": "string"
+          },
+          "snippet_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Snippet Id"
           }
         },
         "required": [
-          "body",
           "client_id"
         ],
         "title": "MessageCreate",
@@ -696,6 +707,28 @@
                 "type": "null"
               }
             ]
+          },
+          "snippet": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SnippetOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "snippet_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Snippet Id"
           }
         },
         "required": [
@@ -704,6 +737,8 @@
           "sender",
           "body",
           "client_id",
+          "snippet_id",
+          "snippet",
           "created_at"
         ],
         "title": "MessageOut",

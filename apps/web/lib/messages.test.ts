@@ -1,4 +1,12 @@
-import { conversationName, mergeMessages, seenBy, type ChatMessage, type Member } from './messages'
+import {
+  conversationName,
+  mergeMessages,
+  previewText,
+  seenBy,
+  typingLabel,
+  type ChatMessage,
+  type Member,
+} from './messages'
 
 const ada = {
   id: 'u-ada',
@@ -17,6 +25,8 @@ function msg(id: string, client_id: string, extra: Partial<ChatMessage> = {}): C
     conversation_id: 'c1',
     sender: ada,
     body: client_id,
+    snippet_id: null,
+    snippet: null,
     created_at: '2026-09-25T12:00:00Z',
     ...extra,
   }
@@ -72,5 +82,20 @@ describe('seenBy', () => {
     ]
     expect(seenBy(members, '01b', 'u-ada').map((m) => m.user.username)).toEqual(['ben'])
     expect(seenBy(members, '01c', 'u-ada')).toEqual([])
+  })
+})
+
+describe('typingLabel', () => {
+  it('names one or two people, then gives up', () => {
+    expect(typingLabel(['Ada'])).toBe('Ada is typing…')
+    expect(typingLabel(['Ada', 'Ben'])).toBe('Ada and Ben are typing…')
+    expect(typingLabel(['Ada', 'Ben', 'Cy'])).toBe('Several people are typing…')
+  })
+})
+
+describe('previewText', () => {
+  it('describes a message that only shares a snippet', () => {
+    expect(previewText(msg('01a', 'a', { body: 'hi' }))).toBe('hi')
+    expect(previewText(msg('01a', 'a', { body: '', snippet_id: 's1' }))).toBe('shared a snippet')
   })
 })

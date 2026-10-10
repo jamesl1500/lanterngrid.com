@@ -1,14 +1,17 @@
 'use client'
 
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import Link from 'next/link'
+import { useEffect } from 'react'
 
 import { browserApi } from '@/lib/api'
+import { realtime } from '@/lib/realtime'
 
 export const UNREAD_KEY = ['notifications', 'unread-count'] as const
 
-/** Bell in the header with the unread count, polled every 30 seconds. */
+/** Bell in the header with the unread count, kept live over the socket. */
 export function NotificationBell({ initialCount }: { initialCount: number }) {
+  const queryClient = useQueryClient()
   const { data: count = initialCount } = useQuery({
     queryKey: UNREAD_KEY,
     queryFn: async () => {
@@ -16,8 +19,19 @@ export function NotificationBell({ initialCount }: { initialCount: number }) {
       return data?.count ?? 0
     },
     initialData: initialCount,
-    refetchInterval: 30_000,
   })
+
+  useEffect(
+    () =>
+      realtime.subscribe((event) => {
+        const changesCount =
+          event.type === 'notification.created' ||
+          event.type === 'notifications.read' ||
+          event.type === 'reconnected'
+        if (changesCount) void queryClient.invalidateQueries({ queryKey: UNREAD_KEY })
+      }),
+    [queryClient],
+  )
   const label = count ? `Notifications, ${count} unread` : 'Notifications'
 
   return (

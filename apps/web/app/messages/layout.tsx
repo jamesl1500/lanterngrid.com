@@ -19,7 +19,7 @@ export default async function MessagesLayout({ children }: { children: ReactNode
     // Fill the screen under the header, so the chat scrolls and the composer stays put.
     <div
       data-fill-screen
-      className="mx-auto grid min-h-0 w-full max-w-6xl flex-1 border-line-strong lg:grid-cols-[22rem_1fr] lg:border-x-2"
+      className="mx-auto grid min-h-0 w-full max-w-6xl flex-1 grid-cols-1 border-line-strong lg:grid-cols-[22rem_minmax(0,1fr)] lg:border-x-2"
     >
       <InboxPane initial={data} meId={me.id} />
       {children}

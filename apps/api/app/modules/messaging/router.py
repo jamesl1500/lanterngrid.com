@@ -115,6 +115,10 @@ async def send_message(
         raise HTTPException(
             status.HTTP_403_FORBIDDEN, "You can only message people who are still your friends."
         ) from None
+    except service.SnippetShareError:
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST, "You can share your own snippets, or anyone's public ones."
+        ) from None
 
 
 @router.post(

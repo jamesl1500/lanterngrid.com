@@ -1,11 +1,12 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import DateTime, ForeignKey, Index, String, Text, UniqueConstraint, func
+from sqlalchemy import DateTime, ForeignKey, Index, String, Text, UniqueConstraint, func, text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.db import Base
 from app.core.ids import uuid7
+from app.modules.snippets.models import Snippet
 from app.modules.users.models import User
 
 
@@ -58,6 +59,10 @@ class Message(Base):
         UniqueConstraint("conversation_id", "sender_id", "client_id", name="uq_messages_client_id"),
         # A conversation's messages in order.
         Index("ix_messages_conversation_id_id", "conversation_id", "id"),
+        # Clearing shared snippets when their owner's account goes.
+        Index(
+            "ix_messages_snippet_id", "snippet_id", postgresql_where=text("snippet_id IS NOT NULL")
+        ),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid7)
@@ -65,8 +70,14 @@ class Message(Base):
         ForeignKey("conversations.id", ondelete="CASCADE")
     )
     sender_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
+    # May be empty when the message only shares a snippet.
     body: Mapped[str] = mapped_column(Text)
     client_id: Mapped[str] = mapped_column(String(64))
+    # A snippet shared in the chat. Everyone in the conversation sees it while it exists.
+    snippet_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("snippets.id", ondelete="SET NULL")
+    )
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     sender: Mapped[User | None] = relationship(lazy="joined")
+    snippet: Mapped[Snippet | None] = relationship(lazy="joined")

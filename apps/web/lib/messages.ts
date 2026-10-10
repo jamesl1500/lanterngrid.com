@@ -52,6 +52,18 @@ export function others(conversation: Conversation, meId: string) {
   return conversation.members.filter((m) => m.user.id !== meId).map((m) => m.user)
 }
 
+/** "Ana is typing…", "Ana and Ben are typing…", "Several people are typing…". */
+export function typingLabel(names: string[]) {
+  if (names.length === 1) return `${names[0]} is typing…`
+  if (names.length === 2) return `${names[0]} and ${names[1]} are typing…`
+  return 'Several people are typing…'
+}
+
+/** What the inbox shows for a conversation's latest message. */
+export function previewText(message: Message) {
+  return message.body || (message.snippet_id ? 'shared a snippet' : '')
+}
+
 /** Who has read up to `messageId`, not counting its sender. */
 export function seenBy(members: Member[], messageId: string, senderId: string) {
   return members.filter(

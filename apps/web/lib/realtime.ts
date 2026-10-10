@@ -9,6 +9,11 @@ export type RealtimeEvent =
   | { type: 'message.created'; message: Message }
   | { type: 'conversation.read'; conversation_id: string; user_id: string; message_id: string }
   | { type: 'conversation.updated'; conversation_id: string }
+  | { type: 'conversation.typing'; conversation_id: string; user_id: string }
+  /** Something new for the bell. */
+  | { type: 'notification.created'; kind: string }
+  /** Notifications were read, maybe in another tab. */
+  | { type: 'notifications.read' }
 
 type Handler = (event: RealtimeEvent) => void
 
@@ -42,6 +47,11 @@ class Realtime {
       // Navigating between pages swaps subscribers; don't drop the socket in between.
       if (this.handlers.size === 0) this.closeTimer = setTimeout(() => this.close(), 5000)
     }
+  }
+
+  /** Send to the server if the socket is open; dropped otherwise (only for hints like typing). */
+  send(data: { type: 'typing'; conversation_id: string }) {
+    if (this.socket?.readyState === WebSocket.OPEN) this.socket.send(JSON.stringify(data))
   }
 
   private emit(event: RealtimeEvent) {

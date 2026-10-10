@@ -1273,10 +1273,15 @@ export interface components {
         };
         /** MessageCreate */
         MessageCreate: {
-            /** Body */
+            /**
+             * Body
+             * @default
+             */
             body: string;
             /** Client Id */
             client_id: string;
+            /** Snippet Id */
+            snippet_id?: string | null;
         };
         /** MessageOut */
         MessageOut: {
@@ -1300,6 +1305,9 @@ export interface components {
              */
             id: string;
             sender: components["schemas"]["UserSummary"] | null;
+            snippet: components["schemas"]["SnippetOut"] | null;
+            /** Snippet Id */
+            snippet_id: string | null;
         };
         /**
          * MessagePage

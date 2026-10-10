@@ -27,6 +27,13 @@ async def send(client: AsyncClient, conversation_id: str, body: str) -> dict[str
     return dict(response.json())
 
 
+async def share(client: AsyncClient, conversation_id: str, snippet_id: str, body: str = "") -> Any:
+    return await client.post(
+        f"/v1/conversations/{conversation_id}/messages",
+        json={"body": body, "client_id": str(uuid.uuid4()), "snippet_id": snippet_id},
+    )
+
+
 async def unread(client: AsyncClient) -> int:
     return int((await client.get("/v1/conversations/unread-count")).json()["conversations"])
 
@@ -135,6 +142,35 @@ async def test_groups(ada: AsyncClient, ben: AsyncClient, cy: AsyncClient) -> No
     assert (await ada.delete(f"/v1/conversations/{dm['id']}/members/me")).status_code == 400
 
 
+async def test_sharing_snippets(ada: AsyncClient, ben: AsyncClient, cy: AsyncClient) -> None:
+    await befriend(ada, ben, "ben")
+    await befriend(ben, cy, "cyd")
+    snippet = {"title": "Retry loop", "language": "python", "content": "while True:\n    pass"}
+    mine = (await ada.post("/v1/snippets", json={**snippet, "visibility": "friends"})).json()
+    group = await start(ben, "ada", "cyd")
+    path = f"/v1/conversations/{group['id']}/messages"
+
+    # A snippet on its own is a message; cy sees it in the group though ada isn't her friend.
+    response = await share(ada, group["id"], mine["id"])
+    assert response.status_code == 201, response.text
+    assert response.json()["body"] == ""
+    seen = (await cy.get(path)).json()["items"][-1]
+    assert seen["snippet"]["title"] == "Retry loop"
+    # Others' friends-only snippets stay theirs to share; public ones are fair game.
+    assert (await share(ben, group["id"], mine["id"])).status_code == 400
+    public = (await ada.post("/v1/snippets", json={**snippet, "title": "Open"})).json()
+    assert (await share(ben, group["id"], public["id"], "look")).status_code == 201
+    assert (await share(ben, group["id"], str(uuid.uuid4()))).status_code == 400
+    # Nothing to send.
+    empty = await ben.post(path, json={"body": "  ", "client_id": "x"})
+    assert empty.status_code == 422
+    # Deleting the snippet empties the card but keeps the message.
+    assert (await ada.delete(f"/v1/snippets/{mine['id']}")).status_code == 204
+    first = (await cy.get(path)).json()["items"][0]
+    assert first["snippet_id"] == mine["id"]
+    assert first["snippet"] is None
+
+
 def connect(
     url: str, client: AsyncClient, **kwargs: Any
 ) -> AbstractAsyncContextManager[AsyncWebSocketSession]:
@@ -197,3 +233,35 @@ async def test_socket_needs_a_fresh_ticket(ada: AsyncClient) -> None:
     other = await ticket_for(ada)
     evil = {"origin": "https://evil.test"}
     assert await close_code(f"/v1/realtime?ticket={other}", headers=evil) == 4403
+
+
+async def test_socket_typing(ada: AsyncClient, ben: AsyncClient, cy: AsyncClient) -> None:
+    await befriend(ada, ben, "ben")
+    dm = await start(ada, "ben")
+    async with (
+        ws_client() as c,
+        connect(f"/v1/realtime?ticket={await ticket_for(ben)}", c) as ben_ws,
+        connect(f"/v1/realtime?ticket={await ticket_for(ada)}", c) as ada_ws,
+        connect(f"/v1/realtime?ticket={await ticket_for(cy)}", c) as cy_ws,
+    ):
+        for ws in (ben_ws, ada_ws, cy_ws):
+            assert (await ws.receive_json(timeout=2))["type"] == "ready"
+        # Someone outside the conversation is ignored, and so is junk.
+        await cy_ws.send_json({"type": "typing", "conversation_id": dm["id"]})
+        await cy_ws.send_text("not json")
+        await cy_ws.send_json({"type": "typing", "conversation_id": "nope"})
+        await ada_ws.send_json({"type": "typing", "conversation_id": dm["id"]})
+        event = await ben_ws.receive_json(timeout=2)
+        assert event["type"] == "conversation.typing"
+        assert event["conversation_id"] == dm["id"]
+        assert event["user_id"] == (await ada.get("/v1/auth/me")).json()["id"]
+
+
+async def test_socket_notifications(ada: AsyncClient, ben: AsyncClient) -> None:
+    async with ws_client() as c, connect(f"/v1/realtime?ticket={await ticket_for(ben)}", c) as ws:
+        assert (await ws.receive_json(timeout=2))["type"] == "ready"
+        await ada.post("/v1/friend-requests", json={"username": "ben"})
+        event = await ws.receive_json(timeout=2)
+        assert event == {"type": "notification.created", "kind": "friend_request"}
+        await ben.post("/v1/me/notifications/read", json={})
+        assert (await ws.receive_json(timeout=2))["type"] == "notifications.read"
