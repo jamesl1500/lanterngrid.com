@@ -155,6 +155,17 @@ async def get_explore(
     return await service.explore(db, viewer, cursor=cursor, limit=limit)
 
 
+@router.get("/search/posts", operation_id="searchPosts")
+async def search_posts(
+    viewer: OptionalUserDep,
+    db: SessionDep,
+    q: Annotated[str, Query(max_length=200)] = "",
+    cursor: uuid.UUID | None = None,
+    limit: Limit = 20,
+) -> PostPage:
+    return await service.search(db, viewer, q, cursor=cursor, limit=limit)
+
+
 @router.get("/tags/{slug}/posts", operation_id="listTagPosts")
 async def list_tag_posts(
     slug: str,

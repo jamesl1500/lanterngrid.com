@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 
 import { PostList } from '@/components/post-list'
+import { SearchBox } from '@/components/search-box'
 import { serverApi } from '@/lib/api'
 import { getMe, sessionToken } from '@/lib/session'
 
@@ -24,6 +25,7 @@ export default async function ExplorePage({ searchParams }: Props) {
         <span className="label">everyone</span>
         <h1 className="text-3xl font-bold">Explore</h1>
         <p className="text-ink-2">Public posts from across Lantern Grid, newest first.</p>
+        <SearchBox className="mt-3" />
       </header>
       <PostList
         page={data}

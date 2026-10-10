@@ -6,6 +6,7 @@ import { usePathname } from 'next/navigation'
 
 const items = [
   { href: '/settings/profile', label: 'Profile' },
+  { href: '/settings/page-layout', label: 'Profile page' },
   { href: '/settings/account', label: 'Account' },
   { href: '/settings/blocked', label: 'Blocked' },
 ] as const
@@ -13,7 +14,7 @@ const items = [
 export function SettingsNav() {
   const pathname = usePathname()
   return (
-    <nav className="flex gap-2 font-mono text-sm md:grid md:gap-0 md:border md:border-line">
+    <nav className="flex flex-wrap gap-2 font-mono text-sm md:grid md:gap-0 md:border md:border-line">
       {items.map((item) => {
         const active = pathname === item.href
         return (

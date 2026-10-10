@@ -1,7 +1,18 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import DateTime, ForeignKey, Index, SmallInteger, String, Text, func, text
+from sqlalchemy import (
+    Computed,
+    DateTime,
+    ForeignKey,
+    Index,
+    SmallInteger,
+    String,
+    Text,
+    func,
+    text,
+)
+from sqlalchemy.dialects.postgresql import TSVECTOR
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.db import Base
@@ -22,6 +33,8 @@ class Post(Base):
             "id",
             postgresql_where=text("visibility = 'public' AND deleted_at IS NULL"),
         ),
+        # Full-text search over post bodies.
+        Index("ix_posts_search", "search", postgresql_using="gin"),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid7)
@@ -40,6 +53,10 @@ class Post(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     edited_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # Kept up to date by Postgres; only search queries read it.
+    search: Mapped[str] = mapped_column(
+        TSVECTOR, Computed("to_tsvector('english', body_md)", persisted=True), deferred=True
+    )
 
     author: Mapped[User] = relationship(lazy="joined")
 

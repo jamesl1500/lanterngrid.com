@@ -153,3 +153,37 @@ async def test_set_links_validates(client: AsyncClient) -> None:
     }
     nine = [{"kind": "other", "url": f"https://example.com/{i}"} for i in range(9)]
     assert (await client.put("/v1/me/links", json={"links": nine})).status_code == 422
+
+
+async def test_profile_readme_and_sections(client: AsyncClient) -> None:
+    await sign_up(client)
+    await onboard(client)
+    profile = (await client.get("/v1/users/adapark")).json()
+    assert profile["readme_md"] is None
+    assert profile["sections"] == ["readme", "pinned", "friends", "posts"]
+
+    response = await client.patch(
+        "/v1/me/profile",
+        json={"readme_md": "## Hi\n\nI build *databases*.", "sections": ["posts", "readme"]},
+    )
+    assert response.status_code == 200, response.text
+    profile = (await client.get("/v1/users/adapark")).json()
+    assert profile["readme_md"] == "## Hi\n\nI build *databases*."
+    # Left-out sections are hidden.
+    assert profile["sections"] == ["posts", "readme"]
+
+    # Null leaves the order alone; a blank README clears it.
+    cleared = (
+        await client.patch("/v1/me/profile", json={"sections": None, "readme_md": " "})
+    ).json()
+    assert cleared["sections"] == ["posts", "readme"]
+    assert cleared["readme_md"] is None
+
+    bad = await client.patch(
+        "/v1/me/profile",
+        json={"sections": ["posts", "posts"], "readme_md": "x" * 10_001},
+    )
+    assert bad.status_code == 422
+    assert {error["loc"][1] for error in bad.json()["detail"]} == {"sections", "readme_md"}
+    unknown = await client.patch("/v1/me/profile", json={"sections": ["guestbook"]})
+    assert unknown.status_code == 422

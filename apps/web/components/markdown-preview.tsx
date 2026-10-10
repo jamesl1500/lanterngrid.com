@@ -10,16 +10,19 @@ const TAG = /(?<![\w#&/])#([A-Za-z][A-Za-z0-9_+#.-]*)/g
 const MENTION = /(?<![\w@/.])@([A-Za-z0-9][A-Za-z0-9_-]*[A-Za-z0-9])/g
 
 /**
- * The composer's preview. Links every #tag and @name as written (the saved post only links
+ * The composer's preview, also used for profile READMEs. Links every #tag and @name as written (the saved post only links
  * people who exist), and shows code unhighlighted to keep the browser bundle small.
  */
-export function MarkdownPreview({ source }: { source: string }) {
-  const entities = {
-    tags: new Set(
-      [...source.matchAll(TAG)].map((m) => slugify((m[1] ?? '').replace(/[.-]+$/, ''))),
-    ),
-    mentions: new Set([...source.matchAll(MENTION)].map((m) => (m[1] ?? '').toLowerCase())),
-  }
+export function MarkdownPreview({ source, plain = false }: { source: string; plain?: boolean }) {
+  // Plain text (a profile README) doesn't link #tags or @people.
+  const entities = plain
+    ? { tags: new Set<string>(), mentions: new Set<string>() }
+    : {
+        tags: new Set(
+          [...source.matchAll(TAG)].map((m) => slugify((m[1] ?? '').replace(/[.-]+$/, ''))),
+        ),
+        mentions: new Set([...source.matchAll(MENTION)].map((m) => (m[1] ?? '').toLowerCase())),
+      }
   return (
     <div className="markdown">
       <ReactMarkdown

@@ -1,5 +1,8 @@
-from httpx import AsyncClient
+from typing import Any
 
+from httpx import ASGITransport, AsyncClient
+
+from app.main import app
 from tests.helpers import befriend, post
 
 
@@ -133,3 +136,38 @@ async def test_get_tag(client: AsyncClient) -> None:
     assert response.json() == {"slug": "typescript", "name": "TypeScript", "kind": "language"}
     assert (await client.get("/v1/tags/suggest?q=typ")).status_code == 200
     assert (await client.get("/v1/tags/definitely-not-a-tag")).status_code == 404
+
+
+async def test_search_posts(ada: AsyncClient, ben: AsyncClient, cy: AsyncClient) -> None:
+    await befriend(ada, ben, "ben")
+    await post(ada, "Moved our queue to Postgres with SKIP LOCKED")
+    await post(ada, "Friends only: the queue migration notes", visibility="friends")
+    await post(ben, "Rust borrow checker finally clicked")
+    await post(ben, "Queues in Redis were simpler")
+
+    async def search(client: AsyncClient, q: str, **params: str | int) -> dict[str, Any]:
+        response = await client.get("/v1/search/posts", params={"q": q, **params})
+        assert response.status_code == 200, response.text
+        return dict(response.json())
+
+    # Stemming: "queue" finds "queues"; newest first.
+    assert bodies(await search(ben, "queue")) == [
+        "Queues in Redis were simpler",
+        "Friends only: the queue migration notes",
+        "Moved our queue to Postgres with SKIP LOCKED",
+    ]
+    # Friends-only posts stay with friends, and signed-out people see public ones.
+    assert len(bodies(await search(cy, "queue"))) == 2
+    anon = AsyncClient(transport=ASGITransport(app=app), base_url="http://testserver")
+    async with anon:
+        assert len(bodies(await search(anon, "queue"))) == 2
+    # Web search syntax: phrases and exclusions.
+    assert bodies(await search(ben, '"borrow checker"')) == ["Rust borrow checker finally clicked"]
+    assert len(bodies(await search(ben, "queue -redis"))) == 2
+    # Paging and empty queries.
+    first = await search(ben, "queue", limit=2)
+    assert first["next_cursor"]
+    rest = await search(ben, "queue", limit=2, cursor=first["next_cursor"])
+    assert bodies(rest) == ["Moved our queue to Postgres with SKIP LOCKED"]
+    assert (await search(ben, "  "))["items"] == []
+    assert (await search(ben, "zebra"))["items"] == []
