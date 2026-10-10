@@ -11,6 +11,7 @@ from app.modules.notifications.schemas import (
     NotificationPage,
 )
 from app.modules.posts.models import Comment
+from app.modules.realtime import bus
 from app.modules.users.summary import summarize
 
 
@@ -22,8 +23,10 @@ def notify(
     actor_id: uuid.UUID,
     subject_id: uuid.UUID | None = None,
 ) -> None:
-    """Queue a notification in the caller's transaction."""
+    """Queue a notification in the caller's transaction. Their open tabs hear about it once
+    that commits."""
     db.add(Notification(user_id=user_id, kind=kind, actor_id=actor_id, subject_id=subject_id))
+    bus.publish_after_commit(db, [user_id], {"type": "notification.created", "kind": kind})
 
 
 def _post_id(n: Notification, comment_posts: dict[uuid.UUID, uuid.UUID]) -> uuid.UUID | None:
@@ -83,6 +86,8 @@ async def mark_read(db: AsyncSession, user_id: uuid.UUID, up_to: uuid.UUID | Non
     if up_to is not None:
         stmt = stmt.where(Notification.id <= up_to)
     await db.execute(stmt.values(read_at=datetime.now(UTC)))
+    # Other tabs clear their bell.
+    bus.publish_after_commit(db, [user_id], {"type": "notifications.read"})
 
 
 async def mark_subject_read(db: AsyncSession, user_id: uuid.UUID, subject_id: uuid.UUID) -> None:
@@ -95,6 +100,7 @@ async def mark_subject_read(db: AsyncSession, user_id: uuid.UUID, subject_id: uu
         )
         .values(read_at=datetime.now(UTC))
     )
+    bus.publish_after_commit(db, [user_id], {"type": "notifications.read"})
 
 
 async def withdraw(db: AsyncSession, subject_id: uuid.UUID) -> None:

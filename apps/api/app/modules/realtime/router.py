@@ -1,4 +1,5 @@
-"""The realtime socket: pushes messages, read receipts and conversation changes.
+"""The realtime socket: pushes messages, read receipts, typing, conversation changes and
+notifications.
 
 Browsers can't send the session cookie to the API's own domain, so they swap it for a
 one-time ticket over the same-origin /api proxy first.
@@ -15,8 +16,10 @@ import structlog
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect, status
 
 from app.core.config import get_settings
+from app.core.db import SessionLocal
 from app.core.redis import redis
 from app.modules.auth.deps import MemberDep
+from app.modules.messaging import service as messaging
 from app.modules.realtime import bus
 from app.modules.realtime.schemas import RealtimeTicket
 
@@ -27,6 +30,8 @@ TICKET_SECONDS = 60
 # Close codes in the 4000s are ours; the browser reconnects with a new ticket.
 CLOSE_BAD_TICKET = 4401
 CLOSE_BAD_ORIGIN = 4403
+# Typing signals from one person in one conversation go out at most this often.
+TYPING_EVERY_SECONDS = 2
 
 
 def _ticket_key(ticket: str) -> str:
@@ -49,12 +54,36 @@ async def _forward(ws: WebSocket, user_id: uuid.UUID) -> None:
                 await ws.send_text(message["data"])
 
 
-async def _receive(ws: WebSocket) -> None:
+async def _typing(user_id: uuid.UUID, conversation_id: object) -> None:
+    """Tell the others in a conversation that this person is typing."""
+    try:
+        cid = uuid.UUID(str(conversation_id))
+    except ValueError:
+        return
+    if not await redis.set(f"rt:typing:{cid}:{user_id}", 1, ex=TYPING_EVERY_SECONDS, nx=True):
+        return
+    async with SessionLocal() as db:
+        ids = await messaging.member_ids(db, cid)
+    if user_id in ids:
+        await bus.publish(
+            [i for i in ids if i != user_id],
+            {"type": "conversation.typing", "conversation_id": cid, "user_id": user_id},
+        )
+
+
+async def _receive(ws: WebSocket, user_id: uuid.UUID) -> None:
     while True:
         data = await ws.receive_text()
-        with contextlib.suppress(ValueError):
-            if json.loads(data).get("type") == "ping":
-                await ws.send_json({"type": "pong"})
+        try:
+            message = json.loads(data)
+        except ValueError:
+            continue
+        if not isinstance(message, dict):
+            continue
+        if message.get("type") == "ping":
+            await ws.send_json({"type": "pong"})
+        elif message.get("type") == "typing":
+            await _typing(user_id, message.get("conversation_id"))
 
 
 @router.websocket("/realtime")
@@ -68,9 +97,10 @@ async def realtime(ws: WebSocket, ticket: str = "") -> None:
         await ws.close(code=CLOSE_BAD_TICKET)
         return
     await ws.accept()
+    person = uuid.UUID(str(user_id))
     tasks = [
-        asyncio.create_task(_forward(ws, uuid.UUID(str(user_id)))),
-        asyncio.create_task(_receive(ws)),
+        asyncio.create_task(_forward(ws, person)),
+        asyncio.create_task(_receive(ws, person)),
     ]
     try:
         done, _ = await asyncio.wait(tasks, return_when=asyncio.FIRST_COMPLETED)

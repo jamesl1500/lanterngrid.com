@@ -7,7 +7,7 @@ import Link from 'next/link'
 import { useEffect } from 'react'
 
 import { browserApi } from '@/lib/api'
-import { conversationName, others, type Conversation } from '@/lib/messages'
+import { conversationName, others, previewText, type Conversation } from '@/lib/messages'
 import { realtime } from '@/lib/realtime'
 import { timeAgo } from '@/lib/time'
 
@@ -96,7 +96,7 @@ function ConversationRow({
   const last = c.last_message
   const unread = c.unread_count > 0 && !active
   const preview = last
-    ? `${last.sender?.id === meId ? 'You: ' : c.kind === 'group' && last.sender ? `${last.sender.display_name}: ` : ''}${last.body}`
+    ? `${last.sender?.id === meId ? 'You: ' : c.kind === 'group' && last.sender ? `${last.sender.display_name}: ` : ''}${previewText(last)}`
     : c.kind === 'group'
       ? `${c.members.length} people`
       : 'No messages yet'

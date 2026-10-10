@@ -68,6 +68,7 @@ from app.core.email import outbox  # noqa: E402
 from app.core.redis import redis  # noqa: E402
 from app.core.storage import get_storage  # noqa: E402
 from app.main import app  # noqa: E402
+from app.modules.realtime import bus  # noqa: E402
 from tests.fakes import FakeStorage  # noqa: E402
 from tests.helpers import member  # noqa: E402
 
@@ -78,6 +79,8 @@ KEEP_TABLES = frozenset({"tags"})
 @pytest.fixture(autouse=True)
 async def clean_state() -> AsyncIterator[None]:
     yield
+    # Let socket events from the test go out before Redis is wiped.
+    await bus.drain()
     tables = ", ".join(t.name for t in Base.metadata.sorted_tables if t.name not in KEEP_TABLES)
     async with engine.begin() as conn:
         await conn.execute(text(f"truncate {tables} cascade"))

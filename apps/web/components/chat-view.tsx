@@ -19,6 +19,7 @@ import {
   MAX_MESSAGE_LENGTH,
   mergeMessages,
   seenBy,
+  typingLabel,
   type ChatMessage,
   type Conversation,
   type Member,
@@ -26,6 +27,10 @@ import {
 } from '@/lib/messages'
 import { realtime } from '@/lib/realtime'
 import type { Me } from '@/lib/session'
+import type { Snippet } from '@/lib/snippets'
+
+import { ChatSnippet } from './chat-snippet'
+import { SnippetPicker } from './snippet-picker'
 
 type Props = {
   conversation: Conversation
@@ -37,6 +42,10 @@ type Props = {
 // Messages from one person this close together share a header.
 const GROUP_GAP_MS = 5 * 60_000
 const clock = new Intl.DateTimeFormat('en', { hour: 'numeric', minute: '2-digit' })
+// Someone counts as typing this long after their last signal.
+const TYPING_SHOWN_MS = 4000
+// How often to tell the others you're typing.
+const TYPING_SEND_MS = 2000
 
 /** A live conversation: history, new messages over the socket, read receipts and sending. */
 export function ChatView({
@@ -58,6 +67,10 @@ export function ChatView({
   const [olderCursor, setOlderCursor] = useState(initialCursor)
   const [loadingOlder, setLoadingOlder] = useState(false)
   const [body, setBody] = useState('')
+  const [attached, setAttached] = useState<Snippet | null>(null)
+  // Who is typing, by user id, until when.
+  const [typing, setTyping] = useState<Record<string, number>>({})
+  const lastTypingSent = useRef(0)
   const [error, setError] = useState<string | null>(null)
   const list = useRef<HTMLOListElement>(null)
   // Whether to stick to the bottom when messages arrive (true unless scrolled up).
@@ -102,6 +115,11 @@ export function ChatView({
       realtime.subscribe((event) => {
         if (event.type === 'message.created' && event.message.conversation_id === id) {
           setMessages((current) => mergeMessages(current, [event.message]))
+          // They sent what they were typing.
+          const sender = event.message.sender?.id
+          if (sender) setTyping((current) => withoutKey(current, sender))
+        } else if (event.type === 'conversation.typing' && event.conversation_id === id) {
+          setTyping((current) => ({ ...current, [event.user_id]: Date.now() + TYPING_SHOWN_MS }))
         } else if (event.type === 'conversation.read' && event.conversation_id === id) {
           setMembers((current) =>
             current.map((m) =>
@@ -119,6 +137,20 @@ export function ChatView({
       }),
     [catchUp, id, router],
   )
+
+  // Forget typists who went quiet.
+  useEffect(() => {
+    const until = Object.values(typing)
+    if (until.length === 0) return
+    const timer = setTimeout(
+      () =>
+        setTyping((current) =>
+          Object.fromEntries(Object.entries(current).filter(([, t]) => t > Date.now())),
+        ),
+      Math.max(Math.min(...until) - Date.now(), 0) + 50,
+    )
+    return () => clearTimeout(timer)
+  }, [typing])
 
   // Read what's on screen, now and whenever the tab comes back.
   useEffect(() => {
@@ -156,7 +188,11 @@ export function ChatView({
     const result = await attempt(() =>
       browserApi.POST('/v1/conversations/{conversation_id}/messages', {
         params: { path: { conversation_id: id } },
-        body: { body: message.body, client_id: message.client_id },
+        body: {
+          body: message.body,
+          client_id: message.client_id,
+          snippet_id: message.snippet_id,
+        },
       }),
     )
     if (result.ok) {
@@ -173,7 +209,7 @@ export function ChatView({
 
   function send() {
     const text = body.trim()
-    if (!text || text.length > MAX_MESSAGE_LENGTH) return
+    if ((!text && !attached) || text.length > MAX_MESSAGE_LENGTH) return
     const clientId = crypto.randomUUID()
     const pending: ChatMessage = {
       id: `pending-${clientId}`,
@@ -181,11 +217,15 @@ export function ChatView({
       conversation_id: id,
       sender: { ...me, username: me.username ?? '', headline: null },
       body: text,
+      snippet_id: attached?.id ?? null,
+      snippet: attached,
       created_at: new Date().toISOString(),
       status: 'sending',
     }
     pinned.current = true
     setBody('')
+    setAttached(null)
+    lastTypingSent.current = 0
     setError(null)
     setMessages((current) => mergeMessages(current, [pending]))
     void deliver(pending)
@@ -199,6 +239,15 @@ export function ChatView({
     void deliver(message)
   }
 
+  function onChange(value: string) {
+    setBody(value)
+    const now = Date.now()
+    if (value.trim() && now - lastTypingSent.current > TYPING_SEND_MS) {
+      lastTypingSent.current = now
+      realtime.send({ type: 'typing', conversation_id: id })
+    }
+  }
+
   function onKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
     if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) {
       event.preventDefault()
@@ -209,6 +258,9 @@ export function ChatView({
   const lastMine = messages.findLast((m) => m.sender?.id === me.id && !m.status)
   const seen = lastMine ? seenBy(members, lastMine.id, me.id) : []
   const isGroup = conversation.kind === 'group'
+  const typists = members
+    .filter((m) => m.user.id !== me.id && typing[m.user.id])
+    .map((m) => m.user.display_name)
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
@@ -261,7 +313,13 @@ export function ChatView({
                   </Link>
                 ) : null}
               </div>
-              <div className={cn('grid max-w-[80%] gap-1', mine && 'justify-items-end')}>
+              <div
+                className={cn(
+                  'grid max-w-[80%] min-w-0 grid-cols-1 gap-1',
+                  m.snippet_id && 'w-[36rem]',
+                  mine && 'justify-items-end',
+                )}
+              >
                 {startsGroup ? (
                   <div className="flex gap-2 font-mono text-xs text-ink-3">
                     {!mine ? (
@@ -272,18 +330,29 @@ export function ChatView({
                     </time>
                   </div>
                 ) : null}
-                <p
-                  className={cn(
-                    'border-2 px-3 py-2 break-words whitespace-pre-wrap',
-                    mine
-                      ? 'border-magenta bg-magenta-soft text-ink'
-                      : 'border-line-strong bg-surface text-ink',
-                    m.status === 'sending' && 'opacity-60',
-                    m.status === 'failed' && 'border-coral',
-                  )}
-                >
-                  {m.body}
-                </p>
+                {m.body ? (
+                  <p
+                    className={cn(
+                      'border-2 px-3 py-2 break-words whitespace-pre-wrap',
+                      mine
+                        ? 'border-magenta bg-magenta-soft text-ink'
+                        : 'border-line-strong bg-surface text-ink',
+                      m.status === 'sending' && 'opacity-60',
+                      m.status === 'failed' && 'border-coral',
+                    )}
+                  >
+                    {m.body}
+                  </p>
+                ) : null}
+                {m.snippet ? (
+                  <div className={cn('w-full', m.status === 'sending' && 'opacity-60')}>
+                    <ChatSnippet snippet={m.snippet} />
+                  </div>
+                ) : m.snippet_id ? (
+                  <p className="border-2 border-dashed border-line-strong px-3 py-2 font-mono text-xs text-ink-3">
+                    This snippet was deleted.
+                  </p>
+                ) : null}
                 {m.status === 'failed' ? (
                   <button
                     type="button"
@@ -305,6 +374,9 @@ export function ChatView({
           )
         })}
       </ol>
+      <p aria-live="polite" className="h-5 px-4 font-mono text-xs text-ink-3">
+        {typists.length ? typingLabel(typists) : null}
+      </p>
       {error ? (
         <Alert tone="error" className="mx-4 mb-2">
           {error}
@@ -315,26 +387,52 @@ export function ChatView({
           e.preventDefault()
           send()
         }}
-        className="flex items-end gap-2 border-t-2 border-line-strong bg-surface p-3"
+        className="grid gap-2 border-t-2 border-line-strong bg-surface p-3"
       >
-        <label htmlFor="message-body" className="sr-only">
-          Message
-        </label>
-        <textarea
-          id="message-body"
-          rows={1}
-          value={body}
-          maxLength={MAX_MESSAGE_LENGTH}
-          onChange={(e) => setBody(e.target.value)}
-          onKeyDown={onKeyDown}
-          placeholder="Write a message"
-          title="Enter sends. Shift+Enter starts a new line."
-          className="max-h-40 min-h-10 flex-1 resize-y border-2 border-line-strong bg-sunk px-3 py-2 placeholder:text-ink-3 focus:border-magenta focus:outline-none"
-        />
-        <Button type="submit" disabled={!body.trim()} className="h-10 bg-magenta text-[#0c1017]">
-          Send
-        </Button>
+        {attached ? (
+          <div className="flex items-center gap-2 justify-self-start border-2 border-l-4 border-line-strong border-l-violet bg-sunk py-1 pr-1 pl-3 font-mono text-xs">
+            <span className="text-ink-3">sharing</span>
+            <span className="max-w-[40ch] truncate text-ink">{attached.title}</span>
+            <button
+              type="button"
+              aria-label="Don't share this snippet"
+              onClick={() => setAttached(null)}
+              className="px-1.5 text-ink-3 hover:text-ink"
+            >
+              ×
+            </button>
+          </div>
+        ) : null}
+        <div className="flex items-end gap-2">
+          <SnippetPicker username={me.username ?? ''} onPick={setAttached} />
+          <label htmlFor="message-body" className="sr-only">
+            Message
+          </label>
+          <textarea
+            id="message-body"
+            rows={1}
+            value={body}
+            maxLength={MAX_MESSAGE_LENGTH}
+            onChange={(e) => onChange(e.target.value)}
+            onKeyDown={onKeyDown}
+            placeholder="Write a message"
+            title="Enter sends. Shift+Enter starts a new line."
+            className="max-h-40 min-h-10 flex-1 resize-y border-2 border-line-strong bg-sunk px-3 py-2 placeholder:text-ink-3 focus:border-magenta focus:outline-none"
+          />
+          <Button
+            type="submit"
+            disabled={!body.trim() && !attached}
+            className="h-10 bg-magenta text-[#0c1017]"
+          >
+            Send
+          </Button>
+        </div>
       </form>
     </div>
   )
+}
+
+function withoutKey(record: Record<string, number>, key: string) {
+  if (!(key in record)) return record
+  return Object.fromEntries(Object.entries(record).filter(([k]) => k !== key))
 }

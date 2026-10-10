@@ -20,6 +20,8 @@ from app.modules.messaging.schemas import (
     MessagePage,
 )
 from app.modules.realtime import bus
+from app.modules.snippets import service as snippets
+from app.modules.snippets.models import Snippet
 from app.modules.social import service as social
 from app.modules.users.models import User
 from app.modules.users.summary import summarize
@@ -55,6 +57,10 @@ class NotOwnerError(Exception):
     pass
 
 
+class SnippetShareError(Exception):
+    """Only your own snippets, or public ones, can be shared in a chat."""
+
+
 def _dm_key(a: uuid.UUID, b: uuid.UUID) -> str:
     low, high = sorted((a, b))
     return f"{low}:{high}"
@@ -67,8 +73,22 @@ def message_out(m: Message) -> MessageOut:
         sender=summarize(m.sender) if m.sender else None,
         body=m.body,
         client_id=m.client_id,
+        snippet_id=m.snippet_id,
+        snippet=snippets.to_out(m.snippet) if m.snippet and m.snippet.deleted_at is None else None,
         created_at=m.created_at,
     )
+
+
+async def _check_snippet(db: AsyncSession, me: User, snippet_id: uuid.UUID) -> None:
+    """Sharing shows the snippet to everyone in the conversation, so a friends-only snippet
+    can only be shared by its owner."""
+    snippet = await db.get(Snippet, snippet_id)
+    if (
+        snippet is None
+        or snippet.deleted_at is not None
+        or (snippet.owner_id != me.id and snippet.visibility != "public")
+    ):
+        raise SnippetShareError
 
 
 async def _people(db: AsyncSession, me: User, usernames: Sequence[str]) -> list[User]:
@@ -315,6 +335,8 @@ async def send(
         other = next((i for i in ids if i != me.id), None)
         if other is None or not await _can_message(db, me.id, other):
             raise NotFriendsError("")
+    if data.snippet_id is not None:
+        await _check_snippet(db, me, data.snippet_id)
     inserted = await db.scalar(
         pg_insert(Message)
         .values(
@@ -323,6 +345,7 @@ async def send(
             sender_id=me.id,
             body=data.body,
             client_id=data.client_id,
+            snippet_id=data.snippet_id,
         )
         .on_conflict_do_nothing(constraint="uq_messages_client_id")
         .returning(Message.id)

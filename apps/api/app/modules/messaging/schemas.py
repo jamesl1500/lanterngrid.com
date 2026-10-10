@@ -2,8 +2,9 @@ import uuid
 from datetime import datetime
 from typing import Annotated, Literal
 
-from pydantic import BaseModel, BeforeValidator, Field
+from pydantic import BaseModel, BeforeValidator, Field, model_validator
 
+from app.modules.snippets.schemas import SnippetOut
 from app.modules.users.schemas import UserSummary
 
 ConversationKind = Literal["dm", "group"]
@@ -37,10 +38,19 @@ class MembersAdd(BaseModel):
 
 
 class MessageCreate(BaseModel):
-    body: Annotated[str, BeforeValidator(_trim), Field(min_length=1, max_length=MAX_MESSAGE_LENGTH)]
+    # Can be empty when sharing a snippet.
+    body: Annotated[str, BeforeValidator(_trim), Field(max_length=MAX_MESSAGE_LENGTH)] = ""
     # Made up by the sender (a UUID works). Sending again with the same one returns the
     # message from the first try, so retries never post twice.
     client_id: Annotated[str, Field(min_length=1, max_length=64)]
+    # One of your snippets, or anyone's public one.
+    snippet_id: uuid.UUID | None = None
+
+    @model_validator(mode="after")
+    def _has_content(self) -> "MessageCreate":
+        if not self.body and self.snippet_id is None:
+            raise ValueError("Write a message or share a snippet.")
+        return self
 
 
 class MessageOut(BaseModel):
@@ -50,6 +60,9 @@ class MessageOut(BaseModel):
     sender: UserSummary | None
     body: str
     client_id: str
+    # Set when a snippet was shared; `snippet` is null once it's deleted.
+    snippet_id: uuid.UUID | None
+    snippet: SnippetOut | None
     created_at: datetime
 
 
