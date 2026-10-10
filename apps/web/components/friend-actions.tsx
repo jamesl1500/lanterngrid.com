@@ -10,11 +10,13 @@ import { browserApi } from '@/lib/api'
 import { attempt } from '@/lib/errors'
 import { answerRequest, type RequestAction } from '@/lib/friends'
 
-type Props = { username: string; relationship: Schemas['Relationship'] }
+import { ReportButton } from './report-button'
+
+type Props = { userId: string; username: string; relationship: Schemas['Relationship'] }
 type Call = () => Promise<{ ok: true } | { ok: false; problem: { message: string } }>
 
-/** The friend button on someone's profile, plus unfriend and block behind a menu. */
-export function FriendActions({ username, relationship }: Props) {
+/** The friend button on someone's profile, plus unfriend, block and report behind a menu. */
+export function FriendActions({ userId, username, relationship }: Props) {
   const router = useRouter()
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -133,6 +135,7 @@ export function FriendActions({ username, relationship }: Props) {
                   Block @{username}
                 </button>
               )}
+              <ReportButton kind="user" subjectId={userId} username={username} />
             </div>
           </details>
         ) : null}

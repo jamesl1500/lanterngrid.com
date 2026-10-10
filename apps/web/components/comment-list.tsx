@@ -7,6 +7,7 @@ import { timeAgo } from '@/lib/time'
 
 import { DeleteCommentButton } from './delete-comment-button'
 import { Markdown } from './markdown'
+import { ReportButton } from './report-button'
 
 type Props = {
   comments: Comment[]
@@ -49,9 +50,12 @@ export function CommentList({ comments, viewerId, postAuthorId }: Props) {
                     <time dateTime={comment.created_at}>{timeAgo(comment.created_at)}</time>
                   </a>
                 </span>
-                {canDelete ? (
-                  <span className="ml-auto">
-                    <DeleteCommentButton commentId={comment.id} />
+                {viewerId ? (
+                  <span className="ml-auto flex gap-3">
+                    {viewerId !== author.id ? (
+                      <ReportButton kind="comment" subjectId={comment.id} look="text" />
+                    ) : null}
+                    {canDelete ? <DeleteCommentButton commentId={comment.id} /> : null}
                   </span>
                 ) : null}
               </div>

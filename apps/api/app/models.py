@@ -2,6 +2,7 @@
 
 from app.modules.auth.models import EmailToken, OAuthAccount, UserSession
 from app.modules.messaging.models import Conversation, ConversationMember, Message
+from app.modules.moderation.models import ModerationCase, Report
 from app.modules.notifications.models import Notification
 from app.modules.pins.models import Pin
 from app.modules.posts.models import Comment, Mention, Post, PostImage, PostTag, Reaction
@@ -21,6 +22,7 @@ __all__ = [
     "Friendship",
     "Mention",
     "Message",
+    "ModerationCase",
     "Notification",
     "OAuthAccount",
     "Pin",
@@ -31,6 +33,7 @@ __all__ = [
     "ProfileLink",
     "Reaction",
     "Repo",
+    "Report",
     "Snippet",
     "Tag",
     "User",

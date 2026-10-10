@@ -85,6 +85,7 @@ async def build_me(db: AsyncSession, user: User) -> Me:
         avatar_url=public_url(user.profile.avatar_key),
         has_password=user.password_hash is not None,
         github_login=await github_login(db, user),
+        is_moderator=user.is_moderator,
         created_at=user.created_at,
     )
 
@@ -111,7 +112,11 @@ async def user_for_session(db: AsyncSession, token: str) -> tuple[User, UserSess
         await db.execute(
             select(User, UserSession)
             .join(UserSession, UserSession.user_id == User.id)
-            .where(UserSession.token_hash == hash_token(token), UserSession.expires_at > now())
+            .where(
+                UserSession.token_hash == hash_token(token),
+                UserSession.expires_at > now(),
+                User.suspended_at.is_(None),
+            )
         )
     ).first()
     return (row[0], row[1]) if row else None

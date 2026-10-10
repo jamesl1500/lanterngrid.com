@@ -1,9 +1,20 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import DateTime, ForeignKey, Index, SmallInteger, String, Text, func, text
+from sqlalchemy import (
+    ColumnElement,
+    DateTime,
+    ForeignKey,
+    Index,
+    SmallInteger,
+    String,
+    Text,
+    func,
+    select,
+    text,
+)
 from sqlalchemy.dialects.postgresql import ARRAY, CITEXT
-from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy.orm import InstrumentedAttribute, Mapped, mapped_column, relationship
 
 from app.core.db import Base
 from app.core.ids import uuid7
@@ -25,6 +36,8 @@ class User(TimestampMixin, Base):
             text("lower(display_name) gin_trgm_ops"),
             postgresql_using="gin",
         ),
+        # Keeps "not suspended" checks cheap: few accounts are ever suspended.
+        Index("ix_users_suspended", "id", postgresql_where=text("suspended_at IS NOT NULL")),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid7)
@@ -35,10 +48,19 @@ class User(TimestampMixin, Base):
     display_name: Mapped[str] = mapped_column(String(50))
     # Null for accounts that only sign in with GitHub.
     password_hash: Mapped[str | None] = mapped_column(Text)
+    # Moderators work the report queue. Granted with `python -m scripts.moderators`.
+    is_moderator: Mapped[bool] = mapped_column(default=False, server_default=text("false"))
+    # Set by a moderator. Suspended accounts can't sign in, and what they wrote is hidden.
+    suspended_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
     profile: Mapped["Profile"] = relationship(
         back_populates="user", lazy="joined", cascade="all, delete-orphan"
     )
+
+
+def not_suspended(user_id: InstrumentedAttribute[uuid.UUID]) -> ColumnElement[bool]:
+    """True where the account in this column isn't suspended, for hiding what they wrote."""
+    return user_id.not_in(select(User.id).where(User.suspended_at.is_not(None)))
 
 
 class Profile(Base):

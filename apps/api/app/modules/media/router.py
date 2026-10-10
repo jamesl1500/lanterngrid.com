@@ -1,9 +1,9 @@
 from fastapi import APIRouter, HTTPException, status
 
 from app.core.db import SessionDep
-from app.core.rate_limit import allow
 from app.core.storage import StorageDep
 from app.modules.auth.deps import CurrentUserDep
+from app.modules.auth.limits import limit_writes
 from app.modules.media import service
 from app.modules.media.schemas import (
     AttachImage,
@@ -20,8 +20,7 @@ router = APIRouter(tags=["media"])
 async def create_upload(
     data: UploadRequest, user: CurrentUserDep, storage: StorageDep
 ) -> UploadTicket:
-    if not await allow(f"upload:{user.id}", limit=30, window_seconds=3600):
-        raise HTTPException(status.HTTP_429_TOO_MANY_REQUESTS, "Too many uploads. Try later.")
+    await limit_writes(user, "upload")
     return service.create_upload(storage, user, data)
 
 
@@ -29,6 +28,7 @@ async def create_upload(
 async def set_my_image(
     kind: ImageKind, data: AttachImage, user: CurrentUserDep, db: SessionDep, storage: StorageDep
 ) -> ProfileImages:
+    await limit_writes(user, "profile")
     try:
         return await service.attach(db, storage, user, kind, data.key)
     except service.UploadNotFoundError:

@@ -5,6 +5,7 @@ import { notFound } from 'next/navigation'
 import { cache } from 'react'
 
 import { CodeBlock } from '@/components/code-block'
+import { ReportButton } from '@/components/report-button'
 import { SnippetActions } from '@/components/snippet-actions'
 import { serverApi } from '@/lib/api'
 import { getMe, sessionToken } from '@/lib/session'
@@ -84,12 +85,17 @@ export default async function SnippetPage({ params }: Props) {
         label={snippet.filename ?? undefined}
         lineNumbers
       />
-      <Link
-        href={`/u/${owner.username}/snippets` as Route}
-        className="font-mono text-xs text-ink-2 hover:text-ink"
-      >
-        ← more snippets from @{owner.username}
-      </Link>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <Link
+          href={`/u/${owner.username}/snippets` as Route}
+          className="font-mono text-xs text-ink-2 hover:text-ink"
+        >
+          ← more snippets from @{owner.username}
+        </Link>
+        {me?.username && !isOwner ? (
+          <ReportButton kind="snippet" subjectId={snippet.id} look="text" />
+        ) : null}
+      </div>
     </main>
   )
 }

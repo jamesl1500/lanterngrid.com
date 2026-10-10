@@ -8,7 +8,7 @@ from sqlalchemy import select
 from app.core.config import get_settings
 from app.core.db import SessionDep
 from app.core.email import send_email
-from app.core.rate_limit import allow
+from app.core.rate_limit import HOUR, MINUTE, Rule, allow, client_ip, enforce
 from app.modules.auth import github, service
 from app.modules.auth.deps import CurrentUserDep, OptionalUserDep
 from app.modules.auth.emails import password_reset_email, verification_email
@@ -28,9 +28,16 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 
 OAUTH_STATE_COOKIE = "lg_oauth_state"
 
-
-def _client_ip(request: Request) -> str:
-    return request.client.host if request.client else "unknown"
+SIGN_UPS = Rule(10, HOUR, "Too many sign-ups. Try later.")
+SIGN_INS_PER_EMAIL = Rule(
+    10,
+    15 * MINUTE,
+    "Too many sign-in attempts for this email. Wait 15 minutes or reset your password.",
+)
+# Guessing passwords across many emails from one place.
+SIGN_INS_PER_IP = Rule(100, HOUR, "Too many sign-in attempts. Try later.")
+VERIFY_EMAILS = Rule(5, HOUR, "Too many emails. Try later.")
+SUSPENDED = "This account has been suspended by a moderator."
 
 
 def _safe_next(path: str | None) -> str | None:
@@ -58,8 +65,7 @@ async def sign_up(
     background: BackgroundTasks,
     db: SessionDep,
 ) -> Me:
-    if not await allow(f"signup:{_client_ip(request)}", limit=10, window_seconds=3600):
-        raise HTTPException(status.HTTP_429_TOO_MANY_REQUESTS, "Too many sign-ups. Try later.")
+    await enforce(f"signup:{client_ip(request)}", SIGN_UPS)
     try:
         user = await service.sign_up(
             db, email=data.email, password=data.password, display_name=data.display_name
@@ -78,14 +84,13 @@ async def sign_up(
 
 @router.post("/signin", operation_id="signIn")
 async def sign_in(data: SignInRequest, request: Request, response: Response, db: SessionDep) -> Me:
-    if not await allow(f"signin:{data.email}", limit=10, window_seconds=900):
-        raise HTTPException(
-            status.HTTP_429_TOO_MANY_REQUESTS,
-            "Too many sign-in attempts for this email. Wait 15 minutes or reset your password.",
-        )
+    await enforce(f"signin:{data.email}", SIGN_INS_PER_EMAIL)
+    await enforce(f"signin-ip:{client_ip(request)}", SIGN_INS_PER_IP)
     user = await service.authenticate(db, data.email, data.password)
     if user is None:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "That email and password don't match.")
+    if user.suspended_at is not None:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, SUSPENDED)
     token = await service.create_session(db, user, request)
     await db.commit()
     service.set_session_cookie(response, token)
@@ -130,8 +135,7 @@ async def resend_verification(
 ) -> None:
     if user.email_verified_at is not None:
         return
-    if not await allow(f"verify-resend:{user.id}", limit=5, window_seconds=3600):
-        raise HTTPException(status.HTTP_429_TOO_MANY_REQUESTS, "Too many emails. Try later.")
+    await enforce(f"verify-resend:{user.id}", VERIFY_EMAILS)
     token = await service.create_email_token(db, user, "verify_email")
     await db.commit()
     background.add_task(send_email, verification_email(user.email, user.display_name, token))
@@ -252,6 +256,8 @@ async def github_callback(
             )
         )
     assert user is not None
+    if user.suspended_at is not None:
+        return fail("suspended")
 
     token = await service.create_session(db, user, request) if current is None else None
     await db.commit()

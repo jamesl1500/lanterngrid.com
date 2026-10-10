@@ -9,25 +9,29 @@ import { Logo } from './logo'
 import { MessagesLink } from './messages-link'
 import { NotificationBell } from './notification-bell'
 
-async function unreadCounts() {
+const NO_COUNTS = { notifications: 0, conversations: 0, reports: 0 }
+
+async function unreadCounts(moderator: boolean) {
   try {
     const api = serverApi(await sessionToken())
-    const [notifications, conversations] = await Promise.all([
+    const [notifications, conversations, moderation] = await Promise.all([
       api.GET('/v1/me/notifications/unread-count', { cache: 'no-store' }),
       api.GET('/v1/conversations/unread-count', { cache: 'no-store' }),
+      moderator ? api.GET('/v1/moderation/summary', { cache: 'no-store' }) : null,
     ])
     return {
       notifications: notifications.data?.count ?? 0,
       conversations: conversations.data?.conversations ?? 0,
+      reports: moderation?.data?.open_cases ?? 0,
     }
   } catch {
-    return { notifications: 0, conversations: 0 }
+    return NO_COUNTS
   }
 }
 
 export async function SiteHeader() {
   const me = await getMe()
-  const unread = me?.username ? await unreadCounts() : { notifications: 0, conversations: 0 }
+  const unread = me?.username ? await unreadCounts(me.is_moderator) : NO_COUNTS
   return (
     <header className="border-b-2 border-line-strong bg-surface">
       <div className="mx-auto flex h-14 max-w-6xl items-center gap-3 px-4 sm:gap-6">
@@ -54,6 +58,16 @@ export async function SiteHeader() {
           <Link href="/kit" className="hidden hover:text-ink sm:inline">
             ui kit
           </Link>
+          {me?.is_moderator ? (
+            // Phones reach it from settings; the header has no room.
+            <Link
+              href="/mod"
+              className="hidden text-coral hover:text-ink sm:inline"
+              aria-label={`Moderation, ${unread.reports} open reports`}
+            >
+              mod{unread.reports > 0 ? ` ${unread.reports}` : ''}
+            </Link>
+          ) : null}
         </nav>
         <div className="ml-auto flex items-center gap-1 sm:gap-2">
           {me ? (

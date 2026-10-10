@@ -11,11 +11,13 @@ const items = [
   { href: '/settings/blocked', label: 'Blocked' },
 ] as const
 
-export function SettingsNav() {
+/** `moderator` adds a link to the report queue. */
+export function SettingsNav({ moderator }: { moderator: boolean }) {
   const pathname = usePathname()
+  const shown = moderator ? [...items, { href: '/mod', label: 'Moderation' } as const] : items
   return (
     <nav className="flex flex-wrap gap-2 font-mono text-sm md:grid md:gap-0 md:border md:border-line">
-      {items.map((item) => {
+      {shown.map((item) => {
         const active = pathname === item.href
         return (
           <Link

@@ -78,6 +78,8 @@ class Message(Base):
         ForeignKey("snippets.id", ondelete="SET NULL")
     )
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    # Set when a moderator removes the message; its text and snippet are cleared then.
+    removed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
     sender: Mapped[User | None] = relationship(lazy="joined")
     snippet: Mapped[Snippet | None] = relationship(lazy="joined")

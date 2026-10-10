@@ -4,8 +4,9 @@ from typing import Annotated
 from fastapi import APIRouter, HTTPException, Query, Response, status
 
 from app.core.db import SessionDep
-from app.core.rate_limit import allow
+from app.core.rate_limit import MINUTE, Rule, enforce
 from app.modules.auth.deps import MemberDep
+from app.modules.auth.limits import limit_writes
 from app.modules.social import service
 from app.modules.social.schemas import (
     FriendRequestCreate,
@@ -22,6 +23,7 @@ from app.modules.users.summary import summarize
 router = APIRouter(tags=["social"])
 
 NOT_FOUND = "No one here by that name."
+PEOPLE_SEARCHES = Rule(120, MINUTE, "That's a lot of searches. Wait a minute.")
 Limit = Annotated[int, Query(ge=1, le=50)]
 
 
@@ -36,10 +38,7 @@ async def _person(db: SessionDep, username: str) -> User:
 async def send_friend_request(
     data: FriendRequestCreate, user: MemberDep, db: SessionDep
 ) -> FriendRequestOut:
-    if not await allow(f"friend-request:{user.id}", limit=50, window_seconds=86400):
-        raise HTTPException(
-            status.HTTP_429_TOO_MANY_REQUESTS, "That's a lot of requests for one day. Try tomorrow."
-        )
+    await limit_writes(user, "friend_request")
     other = await _person(db, data.username)
     try:
         return await service.send_request(db, user, other)
@@ -156,4 +155,6 @@ async def search_people(
     q: Annotated[str, Query(max_length=50)] = "",
     limit: Annotated[int, Query(ge=1, le=20)] = 8,
 ) -> list[UserSummary]:
+    # Searched as people type, so this allows plenty.
+    await enforce(f"people-search:{user.id}", PEOPLE_SEARCHES)
     return [summarize(u) for u in await service.search_people(db, user, q, limit)]

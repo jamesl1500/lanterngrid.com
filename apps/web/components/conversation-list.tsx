@@ -41,6 +41,7 @@ export function ConversationList({ initial, meId, activeId }: Props) {
         // Someone else reading doesn't change my inbox; everything else can.
         const changesInbox =
           event.type === 'message.created' ||
+          event.type === 'message.updated' ||
           event.type === 'conversation.updated' ||
           event.type === 'reconnected' ||
           (event.type === 'conversation.read' && event.user_id === meId)

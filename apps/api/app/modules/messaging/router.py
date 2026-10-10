@@ -4,8 +4,8 @@ from typing import Annotated
 from fastapi import APIRouter, HTTPException, Query, Response, status
 
 from app.core.db import SessionDep
-from app.core.rate_limit import allow
 from app.modules.auth.deps import MemberDep
+from app.modules.auth.limits import limit_writes
 from app.modules.messaging import service
 from app.modules.messaging.schemas import (
     MAX_GROUP_SIZE,
@@ -44,6 +44,7 @@ def _people_error(e: Exception) -> HTTPException:
 async def create_conversation(
     data: ConversationCreate, user: MemberDep, db: SessionDep
 ) -> ConversationOut:
+    await limit_writes(user, "conversation")
     try:
         return await service.create(db, user, data)
     except (service.UnknownPeopleError, service.NotFriendsError, service.GroupFullError) as e:
@@ -103,10 +104,7 @@ async def list_messages(
 async def send_message(
     conversation_id: uuid.UUID, data: MessageCreate, user: MemberDep, db: SessionDep
 ) -> MessageOut:
-    if not await allow(f"message:{user.id}", limit=60, window_seconds=60):
-        raise HTTPException(
-            status.HTTP_429_TOO_MANY_REQUESTS, "You're sending messages very fast. Slow down a bit."
-        )
+    await limit_writes(user, "message")
     try:
         return await service.send(db, user, conversation_id, data)
     except service.ConversationNotFoundError:
@@ -140,6 +138,7 @@ async def mark_read(
 async def add_members(
     conversation_id: uuid.UUID, data: MembersAdd, user: MemberDep, db: SessionDep
 ) -> ConversationOut:
+    await limit_writes(user, "conversation")
     try:
         return await service.add_members(db, user, conversation_id, data.usernames)
     except service.ConversationNotFoundError:

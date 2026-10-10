@@ -4,6 +4,7 @@ from fastapi import APIRouter, HTTPException, Query, status
 
 from app.core.db import SessionDep
 from app.modules.auth.deps import CurrentUserDep
+from app.modules.auth.limits import limit_writes
 from app.modules.tags import service
 from app.modules.tags.schemas import TagOut, TagsUpdate
 
@@ -21,6 +22,7 @@ async def suggest_tags(
 
 @router.put("/me/tags", operation_id="setMyTags")
 async def set_my_tags(data: TagsUpdate, user: CurrentUserDep, db: SessionDep) -> list[TagOut]:
+    await limit_writes(user, "profile")
     await service.set_user_tags(db, user.id, data.tags)
     await db.commit()
     return await service.user_tags(db, user.id)

@@ -61,6 +61,7 @@ export function typingLabel(names: string[]) {
 
 /** What the inbox shows for a conversation's latest message. */
 export function previewText(message: Message) {
+  if (message.removed) return 'message removed'
   return message.body || (message.snippet_id ? 'shared a snippet' : '')
 }
 

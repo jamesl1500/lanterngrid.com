@@ -63,6 +63,8 @@ class MessageOut(BaseModel):
     # Set when a snippet was shared; `snippet` is null once it's deleted.
     snippet_id: uuid.UUID | None
     snippet: SnippetOut | None
+    # Removed by a moderator: the body is empty and there's no snippet.
+    removed: bool
     created_at: datetime
 
 

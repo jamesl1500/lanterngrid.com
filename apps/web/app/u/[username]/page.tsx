@@ -207,7 +207,11 @@ export default async function ProfilePage({ params, searchParams }: Props) {
                 <Link href="/settings/profile">Edit profile</Link>
               </Button>
             ) : relationship ? (
-              <FriendActions username={profile.username} relationship={relationship} />
+              <FriendActions
+                userId={profile.id}
+                username={profile.username}
+                relationship={relationship}
+              />
             ) : (
               <Button asChild variant="accent" size="sm">
                 <Link
