@@ -61,8 +61,9 @@ async def update_profile(db: AsyncSession, user: User, data: ProfileUpdate) -> U
             del changes["display_name"]
         else:
             user.display_name = changes.pop("display_name")
-    if changes.get("accent_color", "") is None:
-        del changes["accent_color"]
+    for field in ("accent_color", "sections"):
+        if changes.get(field, "") is None:
+            del changes[field]
     for field, value in changes.items():
         setattr(user.profile, field, value)
     await db.commit()
@@ -101,6 +102,8 @@ async def profile_settings(db: AsyncSession, user: User) -> ProfileSettings:
         accent_color=p.accent_color,
         avatar_url=public_url(p.avatar_key),
         banner_url=public_url(p.banner_key),
+        readme_md=p.readme_md,
+        sections=p.sections,
         links=await links(db, user.id),
         tags=await tags.user_tags(db, user.id),
     )
@@ -119,6 +122,8 @@ async def public_profile(db: AsyncSession, user: User, viewer: User | None) -> P
         accent_color=p.accent_color,
         avatar_url=public_url(p.avatar_key),
         banner_url=public_url(p.banner_key),
+        readme_md=p.readme_md,
+        sections=p.sections,
         links=await links(db, user.id),
         tags=await tags.user_tags(db, user.id),
         friend_count=await social.friend_count(db, user.id),

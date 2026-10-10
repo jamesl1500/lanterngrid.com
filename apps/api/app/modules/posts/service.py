@@ -405,6 +405,19 @@ async def by_author(
     return await _page(db, stmt, viewer, cursor=cursor, limit=limit)
 
 
+async def search(
+    db: AsyncSession, viewer: User | None, q: str, *, cursor: uuid.UUID | None, limit: int
+) -> PostPage:
+    """Posts the viewer can see whose text matches `q`, newest first. `q` takes web search
+    syntax: words, "quoted phrases", `or` and -excluded words."""
+    if not q.strip():
+        return PostPage(items=[], next_cursor=None)
+    stmt = _visible(viewer).where(
+        Post.search.bool_op("@@")(func.websearch_to_tsquery("english", q))
+    )
+    return await _page(db, stmt, viewer, cursor=cursor, limit=limit)
+
+
 async def react(
     db: AsyncSession, user: User, post_id: uuid.UUID, kind: ReactionKind, on: bool
 ) -> PostReactions:

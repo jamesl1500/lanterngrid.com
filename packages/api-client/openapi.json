@@ -1515,6 +1515,30 @@
             ],
             "title": "Location"
           },
+          "readme_md": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Readme Md"
+          },
+          "sections": {
+            "items": {
+              "enum": [
+                "readme",
+                "pinned",
+                "friends",
+                "posts"
+              ],
+              "type": "string"
+            },
+            "title": "Sections",
+            "type": "array"
+          },
           "tags": {
             "items": {
               "$ref": "#/components/schemas/TagOut"
@@ -1543,6 +1567,8 @@
           "accent_color",
           "avatar_url",
           "banner_url",
+          "readme_md",
+          "sections",
           "links",
           "tags"
         ],
@@ -1619,6 +1645,39 @@
               }
             ],
             "title": "Location"
+          },
+          "readme_md": {
+            "anyOf": [
+              {
+                "maxLength": 10000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Readme Md"
+          },
+          "sections": {
+            "anyOf": [
+              {
+                "items": {
+                  "enum": [
+                    "readme",
+                    "pinned",
+                    "friends",
+                    "posts"
+                  ],
+                  "type": "string"
+                },
+                "maxItems": 4,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sections"
           },
           "website": {
             "anyOf": [
@@ -1725,6 +1784,17 @@
             ],
             "title": "Location"
           },
+          "readme_md": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Readme Md"
+          },
           "relationship": {
             "anyOf": [
               {
@@ -1734,6 +1804,19 @@
                 "type": "null"
               }
             ]
+          },
+          "sections": {
+            "items": {
+              "enum": [
+                "readme",
+                "pinned",
+                "friends",
+                "posts"
+              ],
+              "type": "string"
+            },
+            "title": "Sections",
+            "type": "array"
           },
           "tags": {
             "items": {
@@ -1768,6 +1851,8 @@
           "accent_color",
           "avatar_url",
           "banner_url",
+          "readme_md",
+          "sections",
           "links",
           "tags",
           "friend_count",
@@ -5253,6 +5338,79 @@
         "summary": "Get Repo",
         "tags": [
           "repos"
+        ]
+      }
+    },
+    "/v1/search/posts": {
+      "get": {
+        "operationId": "searchPosts",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "schema": {
+              "default": "",
+              "maxLength": 200,
+              "title": "Q",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "maximum": 50,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PostPage"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Search Posts",
+        "tags": [
+          "posts"
         ]
       }
     },

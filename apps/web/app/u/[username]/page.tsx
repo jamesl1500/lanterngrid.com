@@ -2,14 +2,16 @@ import { accentClasses, Avatar, Button, Card, cn, Tag, type Accent } from '@lant
 import type { Metadata, Route } from 'next'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { cache } from 'react'
+import { cache, Fragment, type ReactNode } from 'react'
 
 import { FriendActions } from '@/components/friend-actions'
+import { Markdown } from '@/components/markdown'
 import { PostList } from '@/components/post-list'
 import { RepoCard } from '@/components/repo-card'
 import { SnippetCard } from '@/components/snippet-card'
 import { serverApi } from '@/lib/api'
 import { linkKindLabel, shortUrl } from '@/lib/links'
+import type { ProfileSection } from '@/lib/profile'
 import { getMe, sessionToken } from '@/lib/session'
 
 // Signed in, the API also says how the viewer relates to this person.
@@ -39,6 +41,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   }
 }
 
+// READMEs don't link #tags or @people.
+const noEntities = { tags: new Set<string>(), mentions: new Set<string>() }
+
 const joined = new Intl.DateTimeFormat('en', { month: 'long', year: 'numeric' })
 
 export default async function ProfilePage({ params, searchParams }: Props) {
@@ -62,6 +67,115 @@ export default async function ProfilePage({ params, searchParams }: Props) {
   const isMe = relationship?.status === 'self'
   const accent = accentClasses[profile.accent_color as Accent]
   const website = profile.website?.replace(/^https?:\/\//, '').replace(/\/$/, '')
+
+  const blocks: Record<ProfileSection, ReactNode> = {
+    readme: profile.readme_md ? (
+      <section aria-labelledby="readme-heading" className="grid grid-cols-1">
+        <Card className="grid grid-cols-1">
+          <div className="flex items-center justify-between border-b border-line px-5 py-2">
+            <h2 id="readme-heading" className="font-mono text-xs tracking-[0.08em] text-ink-3">
+              README.md
+            </h2>
+            {isMe ? (
+              <Link
+                href="/settings/page-layout"
+                className="font-mono text-xs text-ink-3 hover:text-ink"
+              >
+                edit
+              </Link>
+            ) : null}
+          </div>
+          <div className="px-5 py-4 sm:px-8">
+            <Markdown source={profile.readme_md} entities={noEntities} />
+          </div>
+        </Card>
+      </section>
+    ) : isMe ? (
+      <Link
+        href="/settings/page-layout"
+        className="grid gap-1 border-2 border-dashed border-line-strong px-5 py-4 hover:bg-sunk"
+      >
+        <span className="label">add a README</span>
+        <span className="text-sm text-ink-2">
+          Tell people what you work on. Only you see this until you write one.
+        </span>
+      </Link>
+    ) : null,
+    pinned:
+      pinned.length > 0 ? (
+        <section className="grid grid-cols-1 gap-4">
+          <h2 className="border-b-2 border-line-strong pb-2 text-xl font-bold">Pinned</h2>
+          <ul className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            {pinned.map((pin) =>
+              pin.snippet ? (
+                <li key={pin.snippet.id} className="grid grid-cols-1">
+                  <SnippetCard snippet={pin.snippet} maxLines={8} />
+                </li>
+              ) : pin.repo ? (
+                <li key={pin.repo.id} className="grid grid-cols-1">
+                  <RepoCard repo={pin.repo} />
+                </li>
+              ) : null,
+            )}
+          </ul>
+        </section>
+      ) : null,
+    friends:
+      profile.friends.length > 0 ? (
+        <section className="grid gap-4">
+          <div className="flex items-end justify-between border-b-2 border-line-strong pb-2">
+            <h2 className="text-xl font-bold">Friends</h2>
+            <Link
+              href={`/u/${profile.username}/friends` as Route}
+              className="font-mono text-xs text-ink-2 hover:text-ink"
+            >
+              see all {profile.friend_count} →
+            </Link>
+          </div>
+          <ul className="grid grid-cols-4 gap-3 sm:grid-cols-8">
+            {profile.friends.map((friend) => (
+              <li key={friend.id}>
+                <Link
+                  href={`/u/${friend.username}` as Route}
+                  className="grid justify-items-center gap-1.5 text-center"
+                  title={friend.display_name}
+                >
+                  <Avatar
+                    name={friend.display_name}
+                    src={friend.avatar_url}
+                    accent={friend.accent_color as Accent}
+                    size="lg"
+                  />
+                  <span className="w-full truncate font-mono text-xs text-ink-2">
+                    @{friend.username}
+                  </span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null,
+    posts: (
+      <section className="grid grid-cols-1 gap-4">
+        <h2 className="border-b-2 border-line-strong pb-2 text-xl font-bold">Posts</h2>
+        <PostList
+          page={posts ?? { items: [], next_cursor: null }}
+          viewerId={me?.id}
+          olderHref={(next) => `/u/${profile.username}?cursor=${next}`}
+          empty={
+            <>
+              <span className="label">nothing here yet</span>
+              <p className="max-w-[40ch] text-ink-2">
+                {isMe
+                  ? 'Your updates, snippets and wins will show up here.'
+                  : `${profile.display_name} hasn't posted anything you can see yet.`}
+              </p>
+            </>
+          }
+        />
+      </section>
+    ),
+  }
 
   return (
     <main className="mx-auto grid max-w-4xl grid-cols-1 gap-8 px-4 py-8">
@@ -185,78 +299,9 @@ export default async function ProfilePage({ params, searchParams }: Props) {
         </div>
       </Card>
 
-      {pinned.length > 0 ? (
-        <section className="grid grid-cols-1 gap-4">
-          <h2 className="border-b-2 border-line-strong pb-2 text-xl font-bold">Pinned</h2>
-          <ul className="grid grid-cols-1 gap-4 md:grid-cols-2">
-            {pinned.map((pin) =>
-              pin.snippet ? (
-                <li key={pin.snippet.id} className="grid grid-cols-1">
-                  <SnippetCard snippet={pin.snippet} maxLines={8} />
-                </li>
-              ) : pin.repo ? (
-                <li key={pin.repo.id} className="grid grid-cols-1">
-                  <RepoCard repo={pin.repo} />
-                </li>
-              ) : null,
-            )}
-          </ul>
-        </section>
-      ) : null}
-
-      {profile.friends.length > 0 ? (
-        <section className="grid gap-4">
-          <div className="flex items-end justify-between border-b-2 border-line-strong pb-2">
-            <h2 className="text-xl font-bold">Friends</h2>
-            <Link
-              href={`/u/${profile.username}/friends` as Route}
-              className="font-mono text-xs text-ink-2 hover:text-ink"
-            >
-              see all {profile.friend_count} →
-            </Link>
-          </div>
-          <ul className="grid grid-cols-4 gap-3 sm:grid-cols-8">
-            {profile.friends.map((friend) => (
-              <li key={friend.id}>
-                <Link
-                  href={`/u/${friend.username}` as Route}
-                  className="grid justify-items-center gap-1.5 text-center"
-                  title={friend.display_name}
-                >
-                  <Avatar
-                    name={friend.display_name}
-                    src={friend.avatar_url}
-                    accent={friend.accent_color as Accent}
-                    size="lg"
-                  />
-                  <span className="w-full truncate font-mono text-xs text-ink-2">
-                    @{friend.username}
-                  </span>
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </section>
-      ) : null}
-
-      <section className="grid grid-cols-1 gap-4">
-        <h2 className="border-b-2 border-line-strong pb-2 text-xl font-bold">Posts</h2>
-        <PostList
-          page={posts ?? { items: [], next_cursor: null }}
-          viewerId={me?.id}
-          olderHref={(next) => `/u/${profile.username}?cursor=${next}`}
-          empty={
-            <>
-              <span className="label">nothing here yet</span>
-              <p className="max-w-[40ch] text-ink-2">
-                {isMe
-                  ? 'Your updates, snippets and wins will show up here.'
-                  : `${profile.display_name} hasn't posted anything you can see yet.`}
-              </p>
-            </>
-          }
-        />
-      </section>
+      {profile.sections.map((section) => (
+        <Fragment key={section}>{blocks[section]}</Fragment>
+      ))}
     </main>
   )
 }

@@ -78,6 +78,22 @@ Location = Annotated[Annotated[str, Field(max_length=80)] | None, BeforeValidato
 LinkUrl = Annotated[
     str, BeforeValidator(_strip), Field(min_length=1, max_length=300), AfterValidator(_check_url)
 ]
+ProfileSection = Literal["readme", "pinned", "friends", "posts"]
+PROFILE_SECTIONS: tuple[ProfileSection, ...] = ("readme", "pinned", "friends", "posts")
+MAX_README_LENGTH = 10_000
+
+
+def _no_repeats(value: list[str] | None) -> list[str] | None:
+    if value is not None and len(set(value)) != len(value):
+        raise ValueError("Each section can only appear once.")
+    return value
+
+
+Readme = Annotated[
+    Annotated[str, Field(max_length=MAX_README_LENGTH)] | None, BeforeValidator(_blank_to_none)
+]
+# Shown sections in order; any left out are hidden.
+Sections = Annotated[list[ProfileSection], Field(max_length=len(PROFILE_SECTIONS))]
 Website = Annotated[
     Annotated[str, Field(max_length=200), AfterValidator(_check_url)] | None,
     BeforeValidator(_blank_to_none),
@@ -147,6 +163,8 @@ class PublicProfile(BaseModel):
     accent_color: Accent
     avatar_url: str | None
     banner_url: str | None
+    readme_md: str | None
+    sections: list[ProfileSection]
     links: list[ProfileLinkOut]
     tags: list[TagOut]
     friend_count: int
@@ -164,6 +182,8 @@ class ProfileSettings(BaseModel):
     accent_color: Accent
     avatar_url: str | None
     banner_url: str | None
+    readme_md: str | None
+    sections: list[ProfileSection]
     links: list[ProfileLinkOut]
     tags: list[TagOut]
 
@@ -177,6 +197,8 @@ class ProfileUpdate(BaseModel):
     location: Location = None
     website: Website = None
     accent_color: Accent | None = None
+    readme_md: Readme = None
+    sections: Annotated[Sections | None, AfterValidator(_no_repeats)] = None
 
 
 class OnboardingRequest(BaseModel):
