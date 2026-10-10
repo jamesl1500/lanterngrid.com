@@ -60,6 +60,26 @@ export async function SiteHeader() {
             <>
               {me.username ? (
                 <>
+                  {/* Phones search from the explore page; the header has no room. */}
+                  <Link
+                    href="/search"
+                    aria-label="Search"
+                    title="Search"
+                    className="hidden size-8 items-center justify-center border-2 border-transparent text-ink-2 hover:border-line-strong hover:bg-sunk hover:text-ink sm:flex"
+                  >
+                    <svg
+                      viewBox="0 0 16 16"
+                      aria-hidden
+                      className="size-4"
+                      fill="none"
+                      stroke="currentColor"
+                    >
+                      <path
+                        d="M7 12.25a5.25 5.25 0 1 0 0-10.5 5.25 5.25 0 0 0 0 10.5zM11 11l3.5 3.5"
+                        strokeWidth="1.5"
+                      />
+                    </svg>
+                  </Link>
                   <MessagesLink meId={me.id} initialCount={unread.conversations} />
                   <NotificationBell initialCount={unread.notifications} />
                 </>

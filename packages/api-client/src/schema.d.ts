@@ -814,6 +814,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/search/posts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Search Posts */
+        get: operations["searchPosts"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/snippets": {
         parameters: {
             query?: never;
@@ -1558,6 +1575,10 @@ export interface components {
             links: components["schemas"]["ProfileLinkOut"][];
             /** Location */
             location: string | null;
+            /** Readme Md */
+            readme_md: string | null;
+            /** Sections */
+            sections: ("readme" | "pinned" | "friends" | "posts")[];
             /** Tags */
             tags: components["schemas"]["TagOut"][];
             /** Website */
@@ -1578,6 +1599,10 @@ export interface components {
             headline?: string | null;
             /** Location */
             location?: string | null;
+            /** Readme Md */
+            readme_md?: string | null;
+            /** Sections */
+            sections?: ("readme" | "pinned" | "friends" | "posts")[] | null;
             /** Website */
             website?: string | null;
         };
@@ -1609,7 +1634,11 @@ export interface components {
             links: components["schemas"]["ProfileLinkOut"][];
             /** Location */
             location: string | null;
+            /** Readme Md */
+            readme_md: string | null;
             relationship: components["schemas"]["Relationship"] | null;
+            /** Sections */
+            sections: ("readme" | "pinned" | "friends" | "posts")[];
             /** Tags */
             tags: components["schemas"]["TagOut"][];
             /** Username */
@@ -3667,6 +3696,39 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    searchPosts: {
+        parameters: {
+            query?: {
+                q?: string;
+                cursor?: string | null;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PostPage"];
+                };
             };
             /** @description Validation Error */
             422: {

@@ -2,12 +2,13 @@ import uuid
 from datetime import datetime
 
 from sqlalchemy import DateTime, ForeignKey, Index, SmallInteger, String, Text, func, text
-from sqlalchemy.dialects.postgresql import CITEXT
+from sqlalchemy.dialects.postgresql import ARRAY, CITEXT
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.db import Base
 from app.core.ids import uuid7
 from app.core.models import TimestampMixin
+from app.modules.users.schemas import PROFILE_SECTIONS
 
 
 class User(TimestampMixin, Base):
@@ -53,6 +54,14 @@ class Profile(Base):
     accent_color: Mapped[str] = mapped_column(String(16), default="violet", server_default="violet")
     avatar_key: Mapped[str | None] = mapped_column(String(300))
     banner_key: Mapped[str | None] = mapped_column(String(300))
+    # Markdown shown at the top of the profile page, like a GitHub profile README.
+    readme_md: Mapped[str | None] = mapped_column(Text)
+    # The profile page's sections in order; ones left out are hidden. See PROFILE_SECTIONS.
+    sections: Mapped[list[str]] = mapped_column(
+        ARRAY(String(16)),
+        default=lambda: list(PROFILE_SECTIONS),
+        server_default="{readme,pinned,friends,posts}",
+    )
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )
