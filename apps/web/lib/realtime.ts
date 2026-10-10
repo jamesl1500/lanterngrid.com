@@ -7,6 +7,8 @@ export type RealtimeEvent =
   /** The socket came back after dropping: fetch whatever arrived in between. */
   | { type: 'reconnected' }
   | { type: 'message.created'; message: Message }
+  /** A moderator removed a message. */
+  | { type: 'message.updated'; message: Message }
   | { type: 'conversation.read'; conversation_id: string; user_id: string; message_id: string }
   | { type: 'conversation.updated'; conversation_id: string }
   | { type: 'conversation.typing'; conversation_id: string; user_id: string }

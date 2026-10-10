@@ -15,6 +15,7 @@ const errorMessages: Record<string, string> = {
   github_state: 'GitHub sign-in was interrupted or took too long. Try again.',
   github_failed: "GitHub didn't let us read your profile. Try again.",
   github_email: 'Your GitHub account needs a verified primary email address to sign in.',
+  suspended: 'This account has been suspended by a moderator.',
 }
 
 export default async function SignInPage({

@@ -17,6 +17,7 @@ from fastapi import APIRouter, WebSocket, WebSocketDisconnect, status
 
 from app.core.config import get_settings
 from app.core.db import SessionLocal
+from app.core.rate_limit import MINUTE, Rule, enforce
 from app.core.redis import redis
 from app.modules.auth.deps import MemberDep
 from app.modules.messaging import service as messaging
@@ -30,6 +31,8 @@ TICKET_SECONDS = 60
 # Close codes in the 4000s are ours; the browser reconnects with a new ticket.
 CLOSE_BAD_TICKET = 4401
 CLOSE_BAD_ORIGIN = 4403
+# A browser that keeps failing to connect backs off well before this.
+TICKETS = Rule(30, MINUTE, "Reconnecting too often. Wait a minute.")
 # Typing signals from one person in one conversation go out at most this often.
 TYPING_EVERY_SECONDS = 2
 
@@ -40,6 +43,7 @@ def _ticket_key(ticket: str) -> str:
 
 @router.post("/realtime/ticket", operation_id="createRealtimeTicket")
 async def create_ticket(user: MemberDep) -> RealtimeTicket:
+    await enforce(f"ticket:{user.id}", TICKETS)
     ticket = secrets.token_urlsafe(32)
     await redis.set(_ticket_key(ticket), str(user.id), ex=TICKET_SECONDS)
     return RealtimeTicket(ticket=ticket, url=get_settings().realtime_url)

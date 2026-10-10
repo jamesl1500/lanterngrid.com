@@ -30,6 +30,7 @@ import type { Me } from '@/lib/session'
 import type { Snippet } from '@/lib/snippets'
 
 import { ChatSnippet } from './chat-snippet'
+import { ReportButton } from './report-button'
 import { SnippetPicker } from './snippet-picker'
 
 type Props = {
@@ -118,6 +119,8 @@ export function ChatView({
           // They sent what they were typing.
           const sender = event.message.sender?.id
           if (sender) setTyping((current) => withoutKey(current, sender))
+        } else if (event.type === 'message.updated' && event.message.conversation_id === id) {
+          setMessages((current) => mergeMessages(current, [event.message]))
         } else if (event.type === 'conversation.typing' && event.conversation_id === id) {
           setTyping((current) => ({ ...current, [event.user_id]: Date.now() + TYPING_SHOWN_MS }))
         } else if (event.type === 'conversation.read' && event.conversation_id === id) {
@@ -219,6 +222,7 @@ export function ChatView({
       body: text,
       snippet_id: attached?.id ?? null,
       snippet: attached,
+      removed: false,
       created_at: new Date().toISOString(),
       status: 'sending',
     }
@@ -296,7 +300,7 @@ export function ChatView({
             <li
               key={m.client_id + (m.sender?.id ?? '')}
               className={cn(
-                'flex gap-2.5',
+                'group flex gap-2.5',
                 startsGroup ? 'mt-4' : 'mt-1',
                 mine && 'flex-row-reverse',
               )}
@@ -330,6 +334,11 @@ export function ChatView({
                     </time>
                   </div>
                 ) : null}
+                {m.removed ? (
+                  <p className="border-2 border-dashed border-line-strong px-3 py-2 font-mono text-xs text-ink-3">
+                    Removed by a moderator.
+                  </p>
+                ) : null}
                 {m.body ? (
                   <p
                     className={cn(
@@ -352,6 +361,15 @@ export function ChatView({
                   <p className="border-2 border-dashed border-line-strong px-3 py-2 font-mono text-xs text-ink-3">
                     This snippet was deleted.
                   </p>
+                ) : null}
+                {!mine && !m.status && !m.removed ? (
+                  // With a mouse it stays out of the way until you point at the message.
+                  <ReportButton
+                    kind="message"
+                    subjectId={m.id}
+                    look="text"
+                    className="pointer-fine:opacity-0 pointer-fine:group-hover:opacity-100 pointer-fine:focus-visible:opacity-100"
+                  />
                 ) : null}
                 {m.status === 'failed' ? (
                   <button

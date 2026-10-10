@@ -84,10 +84,14 @@ async def update(
 
 
 async def remove(db: AsyncSession, owner: User, snippet_id: uuid.UUID) -> None:
-    snippet = await own(db, owner, snippet_id)
+    await delete_snippet(db, await own(db, owner, snippet_id))
+    await db.commit()
+
+
+async def delete_snippet(db: AsyncSession, snippet: Snippet) -> None:
+    """Delete a snippet and unpin it, without committing."""
     snippet.deleted_at = datetime.now(UTC)
     await db.execute(delete(Pin).where(Pin.item_type == "snippet", Pin.item_id == snippet.id))
-    await db.commit()
 
 
 async def _page(
