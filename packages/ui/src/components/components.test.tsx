@@ -5,6 +5,7 @@ import { useState } from 'react'
 import { AccentPicker } from './accent-picker'
 import { Avatar, initials } from './avatar'
 import { Button } from './button'
+import { Dialog } from './dialog'
 import { describedBy, Field, SelectField } from './field'
 import { Input } from './input'
 import { KindBadge } from './kind-badge'
@@ -141,5 +142,29 @@ describe('TagInput', () => {
     expect(await screen.findByRole('option', { name: 'TypeScript' })).toBeVisible()
     await user.keyboard('{ArrowDown}{Enter}')
     expect(screen.getByRole('status')).toHaveTextContent('Terraform')
+  })
+})
+
+describe('Dialog', () => {
+  function Demo() {
+    const [open, setOpen] = useState(false)
+    return (
+      <>
+        <Button onClick={() => setOpen(true)}>Report</Button>
+        <Dialog open={open} onClose={() => setOpen(false)} title="Report this post" accent="coral">
+          <Button onClick={() => setOpen(false)}>Cancel</Button>
+        </Dialog>
+      </>
+    )
+  }
+
+  it('opens as a labelled modal and closes', async () => {
+    render(<Demo />)
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Report' }))
+    const dialog = screen.getByRole('dialog', { name: 'Report this post' })
+    expect(dialog).toHaveClass('border-t-coral')
+    await userEvent.click(screen.getByRole('button', { name: 'Cancel' }))
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
   })
 })

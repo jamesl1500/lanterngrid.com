@@ -7,10 +7,19 @@ import { useState } from 'react'
 import { browserApi } from '@/lib/api'
 import { attempt } from '@/lib/errors'
 
+import { ReportButton } from './report-button'
+
 const item = 'px-3 py-2 text-left font-mono text-sm hover:bg-sunk'
 
-/** Edit and delete for your own posts. */
-export function PostMenu({ postId, afterDelete }: { postId: string; afterDelete?: Route }) {
+type Props = {
+  postId: string
+  /** Your own post: edit and delete. Anyone else's: report. */
+  own: boolean
+  afterDelete?: Route
+}
+
+/** The ••• menu on a post. */
+export function PostMenu({ postId, own, afterDelete }: Props) {
   const router = useRouter()
   const [confirming, setConfirming] = useState(false)
   const [busy, setBusy] = useState(false)
@@ -35,30 +44,36 @@ export function PostMenu({ postId, afterDelete }: { postId: string; afterDelete?
         •••
       </summary>
       <div className="absolute right-0 z-20 mt-1 grid w-44 border-2 border-line-strong bg-surface shadow-hard">
-        <button
-          type="button"
-          className={item}
-          onClick={() => router.push(`/p/${postId}/edit` as Route)}
-        >
-          Edit
-        </button>
-        {confirming ? (
-          <button
-            type="button"
-            disabled={busy}
-            onClick={remove}
-            className={`${item} bg-coral-soft text-coral`}
-          >
-            {busy ? 'Deleting…' : 'Yes, delete it'}
-          </button>
+        {own ? (
+          <>
+            <button
+              type="button"
+              className={item}
+              onClick={() => router.push(`/p/${postId}/edit` as Route)}
+            >
+              Edit
+            </button>
+            {confirming ? (
+              <button
+                type="button"
+                disabled={busy}
+                onClick={remove}
+                className={`${item} bg-coral-soft text-coral`}
+              >
+                {busy ? 'Deleting…' : 'Yes, delete it'}
+              </button>
+            ) : (
+              <button
+                type="button"
+                className={`${item} text-coral`}
+                onClick={() => setConfirming(true)}
+              >
+                Delete
+              </button>
+            )}
+          </>
         ) : (
-          <button
-            type="button"
-            className={`${item} text-coral`}
-            onClick={() => setConfirming(true)}
-          >
-            Delete
-          </button>
+          <ReportButton kind="post" subjectId={postId} />
         )}
       </div>
     </details>

@@ -36,9 +36,15 @@ def token_from_last_email(path: str) -> str:
     return match.group(1)
 
 
-async def member(client: AsyncClient, username: str, display_name: str | None = None) -> str:
-    """Sign up and onboard someone on this client; returns their username."""
+async def member(
+    client: AsyncClient, username: str, display_name: str | None = None, *, verified: bool = True
+) -> str:
+    """Sign up and onboard someone on this client; returns their username. They verify their
+    email too unless `verified` is false, since unverified accounts get tighter rate limits."""
     await sign_up(client, email=f"{username}@example.com", display_name=display_name or username)
+    if verified:
+        token = token_from_last_email("verify-email")
+        assert (await client.post("/v1/auth/verify-email", json={"token": token})).is_success
     response = await client.post(
         "/v1/me/onboarding",
         json={"username": username, "display_name": display_name or username.capitalize()},

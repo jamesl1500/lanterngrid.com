@@ -34,3 +34,12 @@ async def get_member(user: Annotated[User, Depends(get_current_user)]) -> User:
 
 
 MemberDep = Annotated[User, Depends(get_member)]
+
+
+async def get_moderator(user: Annotated[User, Depends(get_member)]) -> User:
+    if not user.is_moderator:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Only moderators can do that.")
+    return user
+
+
+ModeratorDep = Annotated[User, Depends(get_moderator)]

@@ -3,7 +3,7 @@ from collections import defaultdict
 from collections.abc import Sequence
 from datetime import UTC, datetime
 
-from sqlalchemy import ColumnElement, Select, and_, delete, func, insert, or_, select, true
+from sqlalchemy import ColumnElement, Select, and_, delete, func, insert, or_, select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -44,7 +44,7 @@ from app.modules.social import service as social
 from app.modules.tags import service as tags
 from app.modules.tags.models import Tag
 from app.modules.tags.schemas import TagOut
-from app.modules.users.models import User
+from app.modules.users.models import User, not_suspended
 from app.modules.users.summary import summarize
 
 
@@ -72,10 +72,12 @@ def visible_to(viewer_id: uuid.UUID | None) -> ColumnElement[bool]:
 
 
 def _comments_visible_to(viewer_id: uuid.UUID | None) -> ColumnElement[bool]:
-    """Hide comments from people either side has blocked."""
+    """Hide comments from suspended accounts and from people either side has blocked."""
     if viewer_id is None:
-        return true()
-    return ~social.blocked_either_way(viewer_id, Comment.author_id)
+        return not_suspended(Comment.author_id)
+    return and_(
+        not_suspended(Comment.author_id), ~social.blocked_either_way(viewer_id, Comment.author_id)
+    )
 
 
 async def _reactions(
@@ -357,13 +359,18 @@ async def update(
     return (await _outs(db, [post], author.id))[0]
 
 
-async def remove(db: AsyncSession, storage: Storage, author: User, post_id: uuid.UUID) -> None:
-    post = await _own(db, author, post_id)
+async def delete_post(db: AsyncSession, post: Post) -> list[str]:
+    """Delete a post without committing. Returns the image keys to discard after the commit."""
     post.deleted_at = datetime.now(UTC)
     keys = list(await db.scalars(select(PostImage.key).where(PostImage.post_id == post.id)))
     await db.execute(delete(PostImage).where(PostImage.post_id == post.id))
     await notifications.withdraw(db, post.id)
     await notifications.withdraw_many(db, select(Comment.id).where(Comment.post_id == post.id))
+    return keys
+
+
+async def remove(db: AsyncSession, storage: Storage, author: User, post_id: uuid.UUID) -> None:
+    keys = await delete_post(db, await _own(db, author, post_id))
     await db.commit()
     for key in keys:
         await media.discard(storage, key)
@@ -529,6 +536,11 @@ async def remove_comment(db: AsyncSession, user: User, comment_id: uuid.UUID) ->
     ).first()
     if row is None or user.id not in (row[0].author_id, row[1]):
         raise CommentNotFoundError
-    await db.delete(row[0])
-    await notifications.withdraw(db, comment_id)
+    await delete_comment(db, row[0])
     await db.commit()
+
+
+async def delete_comment(db: AsyncSession, comment: Comment) -> None:
+    """Delete a comment and its notifications, without committing."""
+    await db.delete(comment)
+    await notifications.withdraw(db, comment.id)

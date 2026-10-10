@@ -28,7 +28,7 @@ from app.modules.social.schemas import (
     RequestDirection,
     UserPage,
 )
-from app.modules.users.models import User
+from app.modules.users.models import User, not_suspended
 from app.modules.users.schemas import Relationship
 from app.modules.users.summary import summarize
 
@@ -91,10 +91,11 @@ def can_see(
 ) -> ColumnElement[bool]:
     """Whether the viewer may see something with this author and public/friends visibility:
     public things, their own, and their friends' friends-only ones, minus anything from people
-    either side has blocked. Signed out (None), only public things."""
+    either side has blocked or from suspended accounts. Signed out (None), only public things."""
     if viewer_id is None:
-        return visibility == "public"
+        return and_(visibility == "public", not_suspended(author_id))
     return and_(
+        not_suspended(author_id),
         ~blocked_either_way(viewer_id, author_id),
         or_(
             visibility == "public",
@@ -305,7 +306,7 @@ def _user_page(users: Sequence[User], limit: int) -> UserPage:
 async def friends(
     db: AsyncSession, user_id: uuid.UUID, *, cursor: uuid.UUID | None, limit: int
 ) -> UserPage:
-    stmt = select(User).where(User.id.in_(friend_ids_of(user_id)))
+    stmt = select(User).where(User.id.in_(friend_ids_of(user_id)), User.suspended_at.is_(None))
     if cursor is not None:
         stmt = stmt.where(User.id < cursor)
     users = list(await db.scalars(stmt.order_by(User.id.desc()).limit(limit + 1)))
@@ -339,7 +340,7 @@ async def requests(
     stmt = (
         select(FriendRequest, User)
         .join(User, User.id == theirs)
-        .where(mine == user_id, FriendRequest.status == "pending")
+        .where(mine == user_id, FriendRequest.status == "pending", User.suspended_at.is_(None))
     )
     if cursor is not None:
         stmt = stmt.where(FriendRequest.id < cursor)
@@ -367,6 +368,7 @@ async def search_people(
     prefix = username.startswith(q, autoescape=True)
     stmt = select(User).where(
         User.username.is_not(None),
+        User.suspended_at.is_(None),
         or_(prefix, name.contains(q, autoescape=True), name.op("%")(q)),
     )
     friend_rank: ColumnElement[int] = literal(1)

@@ -27,6 +27,7 @@ function msg(id: string, client_id: string, extra: Partial<ChatMessage> = {}): C
     body: client_id,
     snippet_id: null,
     snippet: null,
+    removed: false,
     created_at: '2026-09-25T12:00:00Z',
     ...extra,
   }
@@ -97,5 +98,9 @@ describe('previewText', () => {
   it('describes a message that only shares a snippet', () => {
     expect(previewText(msg('01a', 'a', { body: 'hi' }))).toBe('hi')
     expect(previewText(msg('01a', 'a', { body: '', snippet_id: 's1' }))).toBe('shared a snippet')
+  })
+
+  it('says when a moderator removed it', () => {
+    expect(previewText(msg('01a', 'a', { body: '', removed: true }))).toBe('message removed')
   })
 })

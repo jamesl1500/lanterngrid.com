@@ -22,7 +22,7 @@ const kindEdge: Record<Post['kind'], string> = {
 
 type Props = {
   post: Post
-  /** The signed-in person's id, to show edit and delete on their own posts. */
+  /** The signed-in person's id: edit and delete on their own posts, report on others'. */
   viewerId?: string
   /** Where to go after deleting (a post page has nothing left to show). */
   afterDelete?: Route
@@ -63,7 +63,9 @@ export function PostCard({ post, viewerId, afterDelete }: Props) {
             </div>
           </div>
           <KindBadge kind={post.kind} />
-          {viewerId === author.id ? <PostMenu postId={post.id} afterDelete={afterDelete} /> : null}
+          {viewerId ? (
+            <PostMenu postId={post.id} own={viewerId === author.id} afterDelete={afterDelete} />
+          ) : null}
         </header>
         {post.achievement && achievement ? (
           <div className="mx-4 mt-3 flex items-center gap-3 border-2 border-amber bg-amber-soft px-4 py-3">
