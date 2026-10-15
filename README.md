@@ -73,6 +73,16 @@ docs at http://localhost:8000/docs.
 
 New migration: `cd apps/api && uv run alembic revision --autogenerate -m "add users"`.
 
+Moderators work the report queue at `/mod`. Give someone the role (or take it away, or list
+who has it) from `apps/api`:
+
+```sh
+uv run python -m scripts.moderators grant <username>   # also: revoke <username>, list
+```
+
+Rate limits for writes live in `apps/api/app/modules/auth/limits.py`. Accounts that haven't
+verified their email get the smaller number.
+
 ## Deployment
 
 - **Web** deploys to Vercel with `apps/web` as the root directory. Set `API_URL` to the API's

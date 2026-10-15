@@ -113,6 +113,8 @@ class Me(BaseModel):
     avatar_url: str | None
     has_password: bool
     github_login: str | None
+    # Can work the report queue at /mod.
+    is_moderator: bool
     created_at: datetime
 
 
@@ -154,6 +156,7 @@ class LinksUpdate(BaseModel):
 
 
 class PublicProfile(BaseModel):
+    id: uuid.UUID
     username: str
     display_name: str
     headline: str | None

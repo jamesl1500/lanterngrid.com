@@ -1,4 +1,5 @@
 import { AccentPickerDemo } from './accent-picker-demo'
+import { DialogDemo } from './dialog-demo'
 import { TagInputDemo } from './tag-input-demo'
 import {
   accents,
@@ -129,6 +130,12 @@ export default function KitPage() {
           <Alert tone="success">Profile saved.</Alert>
           <Alert tone="warning">Confirm your email with the link we sent.</Alert>
           <Alert tone="error">That email and password don&apos;t match.</Alert>
+        </div>
+      </Section>
+
+      <Section title="Dialogs">
+        <div>
+          <DialogDemo />
         </div>
       </Section>
 

@@ -4,9 +4,9 @@ from typing import Annotated
 from fastapi import APIRouter, HTTPException, Query, Response, status
 
 from app.core.db import SessionDep
-from app.core.rate_limit import allow
 from app.modules.auth.deps import MemberDep
 from app.modules.auth.github import GitHubError, GitHubHttpDep
+from app.modules.auth.limits import limit_writes
 from app.modules.repos import service
 from app.modules.repos.schemas import MAX_REPOS, RepoAdd, RepoOut, RepoPage
 from app.modules.users.deps import ProfileOwnerDep
@@ -18,10 +18,7 @@ NOT_FOUND = "That repo isn't on Lantern Grid."
 
 @router.post("/repos", operation_id="addRepo", status_code=status.HTTP_201_CREATED)
 async def add_repo(data: RepoAdd, user: MemberDep, db: SessionDep, http: GitHubHttpDep) -> RepoOut:
-    if not await allow(f"repo:{user.id}", limit=30, window_seconds=3600):
-        raise HTTPException(
-            status.HTTP_429_TOO_MANY_REQUESTS, "That's a lot of repos for one hour. Try later."
-        )
+    await limit_writes(user, "repo")
     try:
         return await service.add(db, http, user, data.repo)
     except service.BadRepoRefError:

@@ -673,6 +673,74 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/moderation/cases": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Cases */
+        get: operations["listModerationCases"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/moderation/cases/{case_id}/resolve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Resolve Case */
+        post: operations["resolveModerationCase"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/moderation/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Summary */
+        get: operations["getModerationSummary"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/moderation/suspensions/{user_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Lift Suspension */
+        delete: operations["liftSuspension"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/people/search": {
         parameters: {
             query?: never;
@@ -773,6 +841,26 @@ export interface paths {
         put?: never;
         /** Create Ticket */
         post: operations["createRealtimeTicket"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/reports": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Create Report
+         * @description Flag something for moderators. The person reported isn't told who reported them.
+         */
+        post: operations["createReport"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1071,6 +1159,69 @@ export interface components {
             /** Github */
             github: boolean;
         };
+        /** CaseOut */
+        CaseOut: {
+            /** Author Suspended */
+            author_suspended: boolean;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Note */
+            note: string | null;
+            /** Post Id */
+            post_id: string | null;
+            /** Report Count */
+            report_count: number;
+            /** Reports */
+            reports: components["schemas"]["ReportOut"][];
+            /** Resolved At */
+            resolved_at: string | null;
+            resolved_by: components["schemas"]["UserSummary"] | null;
+            /** Snapshot */
+            snapshot: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "open" | "dismissed" | "removed" | "suspended";
+            subject_author: components["schemas"]["UserSummary"] | null;
+            /** Subject Gone */
+            subject_gone: boolean;
+            /**
+             * Subject Id
+             * Format: uuid
+             */
+            subject_id: string;
+            /**
+             * Subject Kind
+             * @enum {string}
+             */
+            subject_kind: "post" | "comment" | "snippet" | "message" | "user";
+        };
+        /** CasePage */
+        CasePage: {
+            /** Items */
+            items: components["schemas"]["CaseOut"][];
+            /** Next Cursor */
+            next_cursor: string | null;
+        };
+        /** CaseResolve */
+        CaseResolve: {
+            /**
+             * Action
+             * @enum {string}
+             */
+            action: "dismiss" | "remove" | "suspend";
+            /** Note */
+            note?: string | null;
+        };
         /** CommentCreate */
         CommentCreate: {
             /** Body Md */
@@ -1269,6 +1420,8 @@ export interface components {
              * Format: uuid
              */
             id: string;
+            /** Is Moderator */
+            is_moderator: boolean;
             /** Username */
             username: string | null;
         };
@@ -1321,6 +1474,8 @@ export interface components {
              * Format: uuid
              */
             id: string;
+            /** Removed */
+            removed: boolean;
             sender: components["schemas"]["UserSummary"] | null;
             snippet: components["schemas"]["SnippetOut"] | null;
             /** Snippet Id */
@@ -1335,6 +1490,11 @@ export interface components {
             items: components["schemas"]["MessageOut"][];
             /** Older Cursor */
             older_cursor: string | null;
+        };
+        /** ModerationSummary */
+        ModerationSummary: {
+            /** Open Cases */
+            open_cases: number;
         };
         /** NotificationOut */
         NotificationOut: {
@@ -1626,6 +1786,11 @@ export interface components {
             /** Headline */
             headline: string | null;
             /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
              * Joined At
              * Format: date-time
              */
@@ -1745,6 +1910,47 @@ export interface components {
             items: components["schemas"]["RepoOut"][];
             /** Next Cursor */
             next_cursor: string | null;
+        };
+        /** ReportCreate */
+        ReportCreate: {
+            /** Details */
+            details?: string | null;
+            /**
+             * Reason
+             * @enum {string}
+             */
+            reason: "spam" | "harassment" | "hate" | "explicit" | "impersonation" | "other";
+            /**
+             * Subject Id
+             * Format: uuid
+             */
+            subject_id: string;
+            /**
+             * Subject Kind
+             * @enum {string}
+             */
+            subject_kind: "post" | "comment" | "snippet" | "message" | "user";
+        };
+        /** ReportOut */
+        ReportOut: {
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Details */
+            details: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Reason
+             * @enum {string}
+             */
+            reason: "spam" | "harassment" | "hate" | "explicit" | "impersonation" | "other";
+            reporter: components["schemas"]["UserSummary"];
         };
         /** SignInRequest */
         SignInRequest: {
@@ -3302,6 +3508,123 @@ export interface operations {
             };
         };
     };
+    listModerationCases: {
+        parameters: {
+            query?: {
+                status?: "open" | "closed";
+                cursor?: string | null;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CasePage"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    resolveModerationCase: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                case_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CaseResolve"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CaseOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    getModerationSummary: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ModerationSummary"];
+                };
+            };
+        };
+    };
+    liftSuspension: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                user_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     searchPeople: {
         parameters: {
             query?: {
@@ -3611,6 +3934,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["RealtimeTicket"];
+                };
+            };
+        };
+    };
+    createReport: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReportCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

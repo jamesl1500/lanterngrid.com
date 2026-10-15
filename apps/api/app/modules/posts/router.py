@@ -3,12 +3,13 @@ from collections.abc import Iterator
 from contextlib import contextmanager
 from typing import Annotated
 
-from fastapi import APIRouter, HTTPException, Query, Response, status
+from fastapi import APIRouter, HTTPException, Query, Request, Response, status
 
 from app.core.db import SessionDep
-from app.core.rate_limit import allow
+from app.core.rate_limit import MINUTE, Rule, client_ip, enforce
 from app.core.storage import StorageDep
 from app.modules.auth.deps import MemberDep, OptionalUserDep
+from app.modules.auth.limits import limit_writes
 from app.modules.media import service as media
 from app.modules.posts import service
 from app.modules.posts.schemas import (
@@ -30,6 +31,8 @@ router = APIRouter(tags=["posts"])
 
 Limit = Annotated[int, Query(ge=1, le=50)]
 NOT_FOUND = "That post doesn't exist or you can't see it."
+# Full-text search is the most expensive read, and works signed out.
+SEARCHES = Rule(60, MINUTE, "That's a lot of searches. Wait a minute.")
 BAD_IMAGE = "One of those images didn't upload properly, or is too large. Try adding it again."
 
 
@@ -49,10 +52,7 @@ def _post_errors() -> Iterator[None]:
 async def create_post(
     data: PostCreate, user: MemberDep, db: SessionDep, storage: StorageDep
 ) -> PostOut:
-    if not await allow(f"post:{user.id}", limit=30, window_seconds=3600):
-        raise HTTPException(
-            status.HTTP_429_TOO_MANY_REQUESTS, "That's a lot of posts for one hour. Try later."
-        )
+    await limit_writes(user, "post")
     with _post_errors():
         return await service.create(db, storage, user, data)
 
@@ -67,6 +67,7 @@ async def get_post(post_id: uuid.UUID, viewer: OptionalUserDep, db: SessionDep) 
 async def update_post(
     post_id: uuid.UUID, data: PostUpdate, user: MemberDep, db: SessionDep, storage: StorageDep
 ) -> PostOut:
+    await limit_writes(user, "edit")
     with _post_errors():
         return await service.update(db, storage, user, post_id, data)
 
@@ -88,6 +89,7 @@ async def delete_post(
 async def add_reaction(
     post_id: uuid.UUID, kind: ReactionKind, user: MemberDep, db: SessionDep
 ) -> PostReactions:
+    await limit_writes(user, "reaction")
     with _post_errors():
         return await service.react(db, user, post_id, kind, on=True)
 
@@ -118,10 +120,7 @@ async def list_comments(
 async def create_comment(
     post_id: uuid.UUID, data: CommentCreate, user: MemberDep, db: SessionDep
 ) -> CommentOut:
-    if not await allow(f"comment:{user.id}", limit=120, window_seconds=3600):
-        raise HTTPException(
-            status.HTTP_429_TOO_MANY_REQUESTS, "That's a lot of comments for one hour. Try later."
-        )
+    await limit_writes(user, "comment")
     with _post_errors():
         return await service.add_comment(db, user, post_id, data)
 
@@ -157,12 +156,14 @@ async def get_explore(
 
 @router.get("/search/posts", operation_id="searchPosts")
 async def search_posts(
+    request: Request,
     viewer: OptionalUserDep,
     db: SessionDep,
     q: Annotated[str, Query(max_length=200)] = "",
     cursor: uuid.UUID | None = None,
     limit: Limit = 20,
 ) -> PostPage:
+    await enforce(f"search:{viewer.id if viewer else client_ip(request)}", SEARCHES)
     return await service.search(db, viewer, q, cursor=cursor, limit=limit)
 
 

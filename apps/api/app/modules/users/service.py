@@ -25,9 +25,15 @@ class UsernameTakenError(Exception):
     pass
 
 
-async def get_by_username(db: AsyncSession, username: str) -> User | None:
+async def get_by_username(
+    db: AsyncSession, username: str, *, include_suspended: bool = False
+) -> User | None:
+    """The member with this username. Suspended accounts count as missing unless asked for."""
     # username is citext, so this match is case-insensitive.
-    return (await db.execute(select(User).where(User.username == username))).scalar_one_or_none()
+    stmt = select(User).where(User.username == username)
+    if not include_suspended:
+        stmt = stmt.where(User.suspended_at.is_(None))
+    return (await db.execute(stmt)).scalar_one_or_none()
 
 
 async def check_username(db: AsyncSession, username: str) -> UsernameAvailability:
@@ -40,7 +46,7 @@ async def check_username(db: AsyncSession, username: str) -> UsernameAvailabilit
 
 
 async def complete_onboarding(db: AsyncSession, user: User, data: OnboardingRequest) -> User:
-    if await get_by_username(db, data.username):
+    if await get_by_username(db, data.username, include_suspended=True):
         raise UsernameTakenError
     user.username = data.username
     user.display_name = data.display_name
@@ -113,6 +119,7 @@ async def public_profile(db: AsyncSession, user: User, viewer: User | None) -> P
     assert user.username is not None
     p = user.profile
     return PublicProfile(
+        id=user.id,
         username=user.username,
         display_name=user.display_name,
         headline=p.headline,

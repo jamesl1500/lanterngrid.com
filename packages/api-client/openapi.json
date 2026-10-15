@@ -84,6 +84,202 @@
         "title": "AuthProviders",
         "type": "object"
       },
+      "CaseOut": {
+        "properties": {
+          "author_suspended": {
+            "title": "Author Suspended",
+            "type": "boolean"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "post_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Post Id"
+          },
+          "report_count": {
+            "title": "Report Count",
+            "type": "integer"
+          },
+          "reports": {
+            "items": {
+              "$ref": "#/components/schemas/ReportOut"
+            },
+            "title": "Reports",
+            "type": "array"
+          },
+          "resolved_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resolved At"
+          },
+          "resolved_by": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/UserSummary"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "snapshot": {
+            "title": "Snapshot",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "open",
+              "dismissed",
+              "removed",
+              "suspended"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "subject_author": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/UserSummary"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "subject_gone": {
+            "title": "Subject Gone",
+            "type": "boolean"
+          },
+          "subject_id": {
+            "format": "uuid",
+            "title": "Subject Id",
+            "type": "string"
+          },
+          "subject_kind": {
+            "enum": [
+              "post",
+              "comment",
+              "snippet",
+              "message",
+              "user"
+            ],
+            "title": "Subject Kind",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "subject_kind",
+          "subject_id",
+          "subject_author",
+          "author_suspended",
+          "post_id",
+          "snapshot",
+          "subject_gone",
+          "status",
+          "report_count",
+          "reports",
+          "created_at",
+          "resolved_at",
+          "resolved_by",
+          "note"
+        ],
+        "title": "CaseOut",
+        "type": "object"
+      },
+      "CasePage": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/CaseOut"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          }
+        },
+        "required": [
+          "items",
+          "next_cursor"
+        ],
+        "title": "CasePage",
+        "type": "object"
+      },
+      "CaseResolve": {
+        "properties": {
+          "action": {
+            "enum": [
+              "dismiss",
+              "remove",
+              "suspend"
+            ],
+            "title": "Action",
+            "type": "string"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          }
+        },
+        "required": [
+          "action"
+        ],
+        "title": "CaseResolve",
+        "type": "object"
+      },
       "CommentCreate": {
         "properties": {
           "body_md": {
@@ -558,6 +754,10 @@
             "title": "Id",
             "type": "string"
           },
+          "is_moderator": {
+            "title": "Is Moderator",
+            "type": "boolean"
+          },
           "username": {
             "anyOf": [
               {
@@ -581,6 +781,7 @@
           "avatar_url",
           "has_password",
           "github_login",
+          "is_moderator",
           "created_at"
         ],
         "title": "Me",
@@ -698,6 +899,10 @@
             "title": "Id",
             "type": "string"
           },
+          "removed": {
+            "title": "Removed",
+            "type": "boolean"
+          },
           "sender": {
             "anyOf": [
               {
@@ -739,6 +944,7 @@
           "client_id",
           "snippet_id",
           "snippet",
+          "removed",
           "created_at"
         ],
         "title": "MessageOut",
@@ -772,6 +978,19 @@
           "older_cursor"
         ],
         "title": "MessagePage",
+        "type": "object"
+      },
+      "ModerationSummary": {
+        "properties": {
+          "open_cases": {
+            "title": "Open Cases",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "open_cases"
+        ],
+        "title": "ModerationSummary",
         "type": "object"
       },
       "NotificationOut": {
@@ -1761,6 +1980,11 @@
             ],
             "title": "Headline"
           },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
           "joined_at": {
             "format": "date-time",
             "title": "Joined At",
@@ -1842,6 +2066,7 @@
           }
         },
         "required": [
+          "id",
           "username",
           "display_name",
           "headline",
@@ -2129,6 +2354,106 @@
           "next_cursor"
         ],
         "title": "RepoPage",
+        "type": "object"
+      },
+      "ReportCreate": {
+        "properties": {
+          "details": {
+            "anyOf": [
+              {
+                "maxLength": 1000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Details"
+          },
+          "reason": {
+            "enum": [
+              "spam",
+              "harassment",
+              "hate",
+              "explicit",
+              "impersonation",
+              "other"
+            ],
+            "title": "Reason",
+            "type": "string"
+          },
+          "subject_id": {
+            "format": "uuid",
+            "title": "Subject Id",
+            "type": "string"
+          },
+          "subject_kind": {
+            "enum": [
+              "post",
+              "comment",
+              "snippet",
+              "message",
+              "user"
+            ],
+            "title": "Subject Kind",
+            "type": "string"
+          }
+        },
+        "required": [
+          "subject_kind",
+          "subject_id",
+          "reason"
+        ],
+        "title": "ReportCreate",
+        "type": "object"
+      },
+      "ReportOut": {
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "details": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Details"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "reason": {
+            "enum": [
+              "spam",
+              "harassment",
+              "hate",
+              "explicit",
+              "impersonation",
+              "other"
+            ],
+            "title": "Reason",
+            "type": "string"
+          },
+          "reporter": {
+            "$ref": "#/components/schemas/UserSummary"
+          }
+        },
+        "required": [
+          "id",
+          "reporter",
+          "reason",
+          "details",
+          "created_at"
+        ],
+        "title": "ReportOut",
         "type": "object"
       },
       "SignInRequest": {
@@ -4732,6 +5057,192 @@
         ]
       }
     },
+    "/v1/moderation/cases": {
+      "get": {
+        "operationId": "listModerationCases",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "default": "open",
+              "enum": [
+                "open",
+                "closed"
+              ],
+              "title": "Status",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "maximum": 50,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CasePage"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Cases",
+        "tags": [
+          "moderation"
+        ]
+      }
+    },
+    "/v1/moderation/cases/{case_id}/resolve": {
+      "post": {
+        "operationId": "resolveModerationCase",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "case_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Case Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CaseResolve"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CaseOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Resolve Case",
+        "tags": [
+          "moderation"
+        ]
+      }
+    },
+    "/v1/moderation/summary": {
+      "get": {
+        "operationId": "getModerationSummary",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ModerationSummary"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Summary",
+        "tags": [
+          "moderation"
+        ]
+      }
+    },
+    "/v1/moderation/suspensions/{user_id}": {
+      "delete": {
+        "operationId": "liftSuspension",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "user_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "User Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Lift Suspension",
+        "tags": [
+          "moderation"
+        ]
+      }
+    },
     "/v1/people/search": {
       "get": {
         "operationId": "searchPeople",
@@ -5220,6 +5731,41 @@
         "summary": "Create Ticket",
         "tags": [
           "realtime"
+        ]
+      }
+    },
+    "/v1/reports": {
+      "post": {
+        "description": "Flag something for moderators. The person reported isn't told who reported them.",
+        "operationId": "createReport",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReportCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Report",
+        "tags": [
+          "moderation"
         ]
       }
     },
