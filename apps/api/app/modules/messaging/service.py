@@ -1,7 +1,7 @@
 import uuid
 from collections import defaultdict
 from collections.abc import Sequence
-from datetime import datetime
+from datetime import UTC, datetime
 
 from sqlalchemy import and_, delete, func, or_, select, tuple_, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
@@ -75,6 +75,7 @@ def message_out(m: Message) -> MessageOut:
         client_id=m.client_id,
         snippet_id=m.snippet_id,
         snippet=snippets.to_out(m.snippet) if m.snippet and m.snippet.deleted_at is None else None,
+        removed=m.removed_at is not None,
         created_at=m.created_at,
     )
 
@@ -94,7 +95,11 @@ async def _check_snippet(db: AsyncSession, me: User, snippet_id: uuid.UUID) -> N
 async def _people(db: AsyncSession, me: User, usernames: Sequence[str]) -> list[User]:
     """The friends named in `usernames`, without duplicates or yourself."""
     wanted = {u.strip().lstrip("@").lower() for u in usernames} - {(me.username or "").lower()}
-    found = list(await db.scalars(select(User).where(func.lower(User.username).in_(wanted))))
+    found = list(
+        await db.scalars(
+            select(User).where(func.lower(User.username).in_(wanted), User.suspended_at.is_(None))
+        )
+    )
     missing = sorted(wanted - {str(u.username).lower() for u in found})
     if missing:
         raise UnknownPeopleError(missing)
@@ -426,6 +431,21 @@ async def add_members(
         {"type": "conversation.updated", "conversation_id": str(conversation.id)},
     )
     return (await outs(db, me, [conversation]))[0]
+
+
+async def remove_message(db: AsyncSession, message: Message) -> None:
+    """A moderator's removal: clear the text and snippet but keep the message's place, and
+    update open chats once committed."""
+    message.body = ""
+    message.snippet_id = None
+    message.removed_at = datetime.now(UTC)
+    await db.flush()
+    await db.refresh(message, ["snippet"])
+    bus.publish_after_commit(
+        db,
+        await member_ids(db, message.conversation_id),
+        {"type": "message.updated", "message": message_out(message).model_dump(mode="json")},
+    )
 
 
 async def leave(db: AsyncSession, me: User, conversation_id: uuid.UUID) -> None:

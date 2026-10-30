@@ -12,6 +12,7 @@ from app.modules.notifications.schemas import (
 )
 from app.modules.posts.models import Comment
 from app.modules.realtime import bus
+from app.modules.users.models import not_suspended
 from app.modules.users.summary import summarize
 
 
@@ -38,7 +39,9 @@ def _post_id(n: Notification, comment_posts: dict[uuid.UUID, uuid.UUID]) -> uuid
 async def page(
     db: AsyncSession, user_id: uuid.UUID, *, cursor: uuid.UUID | None, limit: int
 ) -> NotificationPage:
-    stmt = select(Notification).where(Notification.user_id == user_id)
+    stmt = select(Notification).where(
+        Notification.user_id == user_id, not_suspended(Notification.actor_id)
+    )
     if cursor is not None:
         stmt = stmt.where(Notification.id < cursor)
     rows = list(await db.scalars(stmt.order_by(Notification.id.desc()).limit(limit + 1)))
@@ -74,7 +77,11 @@ async def unread_count(db: AsyncSession, user_id: uuid.UUID) -> int:
     count = await db.scalar(
         select(func.count())
         .select_from(Notification)
-        .where(Notification.user_id == user_id, Notification.read_at.is_(None))
+        .where(
+            Notification.user_id == user_id,
+            Notification.read_at.is_(None),
+            not_suspended(Notification.actor_id),
+        )
     )
     return count or 0
 

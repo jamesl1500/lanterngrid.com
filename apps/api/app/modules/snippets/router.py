@@ -4,8 +4,8 @@ from typing import Annotated
 from fastapi import APIRouter, HTTPException, Query, Response, status
 
 from app.core.db import SessionDep
-from app.core.rate_limit import allow
 from app.modules.auth.deps import MemberDep, OptionalUserDep
+from app.modules.auth.limits import limit_writes
 from app.modules.snippets import service
 from app.modules.snippets.schemas import (
     SnippetCreate,
@@ -22,10 +22,7 @@ NOT_FOUND = "That snippet doesn't exist or you can't see it."
 
 @router.post("/snippets", operation_id="createSnippet", status_code=status.HTTP_201_CREATED)
 async def create_snippet(data: SnippetCreate, user: MemberDep, db: SessionDep) -> SnippetOut:
-    if not await allow(f"snippet:{user.id}", limit=30, window_seconds=3600):
-        raise HTTPException(
-            status.HTTP_429_TOO_MANY_REQUESTS, "That's a lot of snippets for one hour. Try later."
-        )
+    await limit_writes(user, "snippet")
     return await service.create(db, user, data)
 
 
@@ -41,6 +38,7 @@ async def get_snippet(snippet_id: uuid.UUID, viewer: OptionalUserDep, db: Sessio
 async def update_snippet(
     snippet_id: uuid.UUID, data: SnippetUpdate, user: MemberDep, db: SessionDep
 ) -> SnippetOut:
+    await limit_writes(user, "edit")
     try:
         return await service.update(db, user, snippet_id, data)
     except service.SnippetNotFoundError:

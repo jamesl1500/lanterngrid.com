@@ -1,7 +1,9 @@
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, Request, status
 
 from app.core.db import SessionDep
+from app.core.rate_limit import MINUTE, Rule, client_ip, enforce
 from app.modules.auth.deps import CurrentUserDep, OptionalUserDep
+from app.modules.auth.limits import limit_writes
 from app.modules.auth.service import build_me
 from app.modules.social import service as social
 from app.modules.users import service
@@ -17,6 +19,8 @@ from app.modules.users.schemas import (
 )
 
 router = APIRouter(tags=["users"])
+
+USERNAME_CHECKS = Rule(120, MINUTE, "Too many checks. Wait a minute.")
 
 
 @router.get("/users/{username}", operation_id="getPublicProfile")
@@ -35,7 +39,9 @@ async def get_public_profile(
 
 
 @router.get("/usernames/{username}", operation_id="checkUsername")
-async def check_username(username: str, db: SessionDep) -> UsernameAvailability:
+async def check_username(username: str, request: Request, db: SessionDep) -> UsernameAvailability:
+    # Checked as people type, so generous, but it shouldn't become a way to list usernames.
+    await enforce(f"username-check:{client_ip(request)}", USERNAME_CHECKS)
     return await service.check_username(db, username)
 
 
@@ -59,6 +65,7 @@ async def get_my_profile(user: CurrentUserDep, db: SessionDep) -> ProfileSetting
 async def update_my_profile(
     data: ProfileUpdate, user: CurrentUserDep, db: SessionDep
 ) -> ProfileSettings:
+    await limit_writes(user, "profile")
     return await service.profile_settings(db, await service.update_profile(db, user, data))
 
 
@@ -66,5 +73,6 @@ async def update_my_profile(
 async def set_my_links(
     data: LinksUpdate, user: CurrentUserDep, db: SessionDep
 ) -> list[ProfileLinkOut]:
+    await limit_writes(user, "profile")
     await service.set_links(db, user.id, data.links)
     return await service.links(db, user.id)
